@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lending Ledger</title>
+<style>
+  :root {
+    --bg: #f7f6f2;
+    --surface: #ffffff;
+    --surface2: #f0ede6;
+    --border: #e2ddd6;
+    --border2: #ccc8bf;
+    --text: #1a1916;
+    --text2: #6b6860;
+    --text3: #9b9890;
+    --blue: #185FA5;
+    --blue-bg: #E6F1FB;
+    --blue-text: #0C447C;
+    --green: #0F6E56;
+    --green-bg: #E1F5EE;
+    --green-text: #085041;
+    --amber: #BA7517;
+    --amber-bg: #FAEEDA;
+    --amber-text: #633806;
+    --red: #A32D2D;
+    --red-bg: #FCEBEB;
+    --red-text: #791F1F;
+    --gray-bg: #D3D1C7;
+    --gray-text: #444441;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+  /* Layout */
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 50; }
+  .logo { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .logo span { color: var(--blue); }
+  .sync-status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gray-bg); }
+  .sync-dot.connected { background: #1D9E75; }
+  .sync-dot.syncing { background: var(--amber); animation: pulse 1s infinite; }
+  .sync-dot.error { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+  /* Setup screen */
+  .setup-wrap { max-width: 560px; margin: 48px auto; }
+  .setup-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); }
+  .setup-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .setup-sub { color: var(--text2); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
+  .steps { counter-reset: step; margin-bottom: 24px; }
+  .step { display: flex; gap: 14px; margin-bottom: 16px; align-items: flex-start; }
+  .step-num { counter-increment: step; width: 26px; height: 26px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .step-body { flex: 1; font-size: 13px; line-height: 1.7; color: var(--text2); }
+  .step-body a { color: var(--blue); }
+  .step-body code { background: var(--surface2); padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: monospace; color: var(--text); }
+
+  /* Form elements */
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.4px; }
+  input, select, textarea { font-family: inherit; font-size: 14px; padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); width: 100%; transition: border-color 0.15s; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(24,95,165,0.1); }
+  .btn { font-family: inherit; padding: 9px 18px; border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; font-weight: 500; border: 1px solid var(--border); background: var(--surface); color: var(--text); transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { background: var(--surface2); border-color: var(--border2); }
+  .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .btn-primary:hover { background: var(--blue-text); border-color: var(--blue-text); }
+  .btn-success { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn-success:hover { background: var(--green-text); }
+  .btn-danger { background: var(--red-bg); color: var(--red-text); border-color: #F09595; }
+  .btn-danger:hover { background: #F7C1C1; }
+  .btn-sm { padding: 5px 11px; font-size: 12px; }
+  .error-msg { color: var(--red); font-size: 12px; padding: 4px 0; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .tab { padding: 10px 16px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; font-family: inherit; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .metric-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .metric-value { font-size: 22px; font-weight: 700; line-height: 1; }
+  .metric-value.blue { color: var(--blue); }
+  .metric-value.green { color: var(--green); }
+  .metric-value.amber { color: var(--amber); }
+  .metric-value.red { color: var(--red); }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; }
+  .card:hover { box-shadow: var(--shadow); border-color: var(--border2); }
+  .card-nocursor { cursor: default; }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .borrower-name { font-size: 16px; font-weight: 700; }
+  .borrower-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .badge-active { background: var(--green-bg); color: var(--green-text); }
+  .badge-overdue { background: var(--red-bg); color: var(--red-text); }
+  .badge-settled { background: var(--gray-bg); color: var(--gray-text); }
+  .badge-partial { background: var(--amber-bg); color: var(--amber-text); }
+  .card-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+  .stat { font-size: 12px; }
+  .stat-label { color: var(--text3); font-size: 11px; }
+  .stat-value { font-weight: 600; margin-top: 1px; }
+  .progress-wrap { margin-top: 4px; }
+  .progress-bar { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--green); border-radius: 3px; transition: width 0.4s; }
+  .progress-label { font-size: 11px; color: var(--text3); margin-top: 3px; text-align: right; }
+  .investor-strip { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text2); }
+  .inv-tag { background: var(--blue-bg); color: var(--blue-text); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 24px; width: 600px; max-width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .full { grid-column: 1 / -1; }
+  .section-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+  /* Detail modal specifics */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .detail-item .detail-label { font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .detail-item .detail-val { font-size: 14px; font-weight: 500; margin-top: 2px; }
+  .payment-row { display: grid; grid-template-columns: 100px 1fr 90px 90px 36px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .payment-row:last-child { border-bottom: none; }
+  .payment-type { background: var(--surface2); padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 600; color: var(--text2); }
+  .empty-state { text-align: center; padding: 32px; color: var(--text3); }
+  .empty-icon { font-size: 36px; margin-bottom: 8px; }
+
+  /* Investor cards */
+  .investor-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+  .investor-card { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
+  .investor-card .inv-name { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .investor-card .inv-amt { font-size: 18px; font-weight: 700; }
+  .investor-card .inv-pct { font-size: 12px; color: var(--text3); }
+
+  /* Notifications */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: #fff; padding: 12px 18px; border-radius: var(--radius-sm); font-size: 13px; z-index: 999; opacity: 0; transform: translateY(8px); transition: all 0.25s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--red); }
+
+  /* Loading */
+  .loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 32px; color: var(--text2); font-size: 14px; }
+  .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .flex-end { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .flex { display: flex; gap: 8px; align-items: center; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .text-sm { font-size: 12px; color: var(--text2); }
+  .text-muted { color: var(--text3); }
+  .fw-bold { font-weight: 700; }
+  .mt-1 { margin-top: 8px; }
+  .mb-1 { margin-bottom: 8px; }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .card-stats { grid-template-columns: repeat(2, 1fr); }
+    .payment-row { grid-template-columns: 1fr 1fr 36px; }
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Lending <span>Ledger</span></div>
+  <div class="sync-status">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-label">Not connected</span>
+    <button class="btn btn-sm" id="btn-settings" onclick="showSetup()" style="margin-left:4px">⚙ Settings</button>
+  </div>
+</div>
+
+<!-- Setup Screen -->
+<div id="setup-screen" class="container">
+  <div class="setup-wrap">
+    <div class="setup-card">
+      <div class="setup-title">Connect to Google Sheets</div>
+      <div class="setup-sub">This app syncs all loan data to a shared Google Sheet so both investors can see and update records in real time.</div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Create a Google Sheet</strong> — go to <a href="https://sheets.new" target="_blank">sheets.new</a>, create a blank spreadsheet, and copy its <strong>Sheet ID</strong> from the URL:<br>
+            <code>docs.google.com/spreadsheets/d/<strong>[SHEET-ID]</strong>/edit</code>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Get a Google API Key</strong> — go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console → APIs & Credentials</a>, create a project, enable the <strong>Google Sheets API</strong>, then create an <strong>API Key</strong>. Restrict it to the Sheets API for safety.
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Make the sheet editable</strong> — click Share on your Google Sheet, set access to <strong>"Anyone with the link can edit"</strong>. Share this HTML file with your partner — they enter the same Sheet ID and API Key.
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Enter investor names</strong> — set the names for both investors. These are shared across the sheet.
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="form-group full">
+          <label>Google Sheet ID</label>
+          <input type="text" id="cfg-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" />
+        </div>
+        <div class="form-group full">
+          <label>Google API Key</label>
+          <input type="password" id="cfg-api-key" placeholder="AIzaSy..." />
+        </div>
+        <div class="form-group">
+          <label>Investor 1 name</label>
+          <input type="text" id="cfg-inv1" placeholder="e.g. Ahmad" value="Investor A" />
+        </div>
+        <div class="form-group">
+          <label>Investor 2 name</label>
+          <input type="text" id="cfg-inv2" placeholder="e.g. Rajan" value="Investor B" />
+        </div>
+      </div>
+      <div id="setup-error" class="error-msg mb-1"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="connectSheet()">
+        <span id="connect-btn-text">Connect & initialise sheet</span>
+      </button>
+      <div class="text-sm" style="margin-top:12px;text-align:center">
+        Your API key is stored only in your browser's local storage and never sent anywhere except Google's servers.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="app-screen" class="container" style="display:none">
+  <div class="flex-between mb-1" style="margin-bottom:20px">
+    <div>
+      <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">Dashboard</div>
+      <div class="text-muted" style="font-size:13px" id="last-sync-text">Loading…</div>
+    </div>
+    <div class="flex">
+      <button class="btn" onclick="syncData()" id="btn-sync">↻ Sync</button>
+      <button class="btn btn-primary" onclick="openNewLoan()">+ New Loan</button>
+    </div>
+  </div>
+
+  <div class="metrics" id="metrics"></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('loans',this)">Active Loans</button>
+    <button class="tab" onclick="switchTab('all',this)">All Loans</button>
+    <button class="tab" onclick="switchTab('investments',this)">Investments</button>
+  </div>
+
+  <div id="loans" class="section active"></div>
+  <div id="all" class="section"></div>
+  <div id="investments" class="section"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────
+const LS = {
+  get: k => { try { return localStorage.getItem(k); } catch(e){return null;} },
+  set: (k,v) => { try { localStorage.setItem(k,v); } catch(e){} },
+};
+const CFG_KEY = 'll_config_v2';
+let cfg = null;
+let state = { loans: [], investors: [{id:'inv1',name:'Investor A'},{id:'inv2',name:'Investor B'}], investments: [] };
+let syncing = false;
+
+// Sheet tab names
+const TABS = { LOANS: 'Loans', PAYMENTS: 'Payments', INVESTMENTS: 'Investments', CONFIG: 'Config' };
+
+function loadCfg() {
+  const s = LS.get(CFG_KEY);
+  if (s) { try { cfg = JSON.parse(s); return true; } catch(e){} }
+  return false;
+}
+function saveCfg() { LS.set(CFG_KEY, JSON.stringify(cfg)); }
+
+// ── Google Sheets API ────────────────────────────────────────────
+const baseUrl = id => `https://sheets.googleapis.com/v4/spreadsheets/${id}`;
+
+async function sheetsGet(range) {
+  const r = await fetch(`${baseUrl(cfg.sheetId)}/values/${encodeURIComponent(range)}?key=${cfg.apiKey}`);
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.status); }
+  const d = await r.json();
+  return d.values || [];
+}
+
+async function sheetsUpdate(range, values) {
+  const r = await fetch(
+    `${baseUrl(cfg.sheetId)}/values/${encodeURIComponent(range)}?valueInputOption=RAW&key=${cfg.apiKey}`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getOAuthToken() },
+      body: JSON.stringify({ range, majorDimension: 'ROWS', values }) }
+  );
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.status); }
+  return await r.json();
+}
+
+async function sheetsAppend(tab, values) {
+  const r = await fetch(
+    `${baseUrl(cfg.sheetId)}/values/${encodeURIComponent(tab)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS&key=${cfg.apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getOAuthToken() },
+      body: JSON.stringify({ majorDimension: 'ROWS', values }) }
+  );
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.status); }
+  return await r.json();
+}
+
+async function sheetsBatchUpdate(requests) {
+  const r = await fetch(
+    `${baseUrl(cfg.sheetId)}:batchUpdate?key=${cfg.apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getOAuthToken() },
+      body: JSON.stringify({ requests }) }
+  );
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.status); }
+  return await r.json();
+}
+
+async function sheetsWriteAll(tab, rows) {
+  // Clear then write
+  const clearR = await fetch(
+    `${baseUrl(cfg.sheetId)}/values/${encodeURIComponent(tab)}:clear?key=${cfg.apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getOAuthToken() },
+      body: '{}' }
+  );
+  if (!clearR.ok) throw new Error('Clear failed');
+  if (!rows.length) return;
+  const r = await fetch(
+    `${baseUrl(cfg.sheetId)}/values/${encodeURIComponent(tab)}?valueInputOption=RAW&key=${cfg.apiKey}`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getOAuthToken() },
+      body: JSON.stringify({ range: tab, majorDimension: 'ROWS', values: rows }) }
+  );
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.status); }
+}
+
+// OAuth token via GIS (Google Identity Services)
+let _token = null;
+let _tokenClient = null;
+async function getOAuthToken() {
+  if (_token && _token.expires > Date.now()) return _token.value;
+  return new Promise((resolve, reject) => {
+    if (!_tokenClient) {
+      _tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: cfg.clientId || '___NO_CLIENT_ID___',
+        scope: 'https://www.googleapis.com/auth/spreadsheets',
+        callback: (resp) => {
+          if (resp.error) { reject(resp.error); return; }
+          _token = { value: resp.access_token, expires: Date.now() + (resp.expires_in - 60) * 1000 };
+          resolve(_token.value);
+        }
+      });
+    }
+    _tokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+
+// ── Sheet Initialisation ─────────────────────────────────────────
+async function initSheet() {
+  // Use service-account-free approach: just write headers if sheets are empty
+  // We'll use the API key for reads, and the OAuth flow for writes
+  // First check if headers exist
+  try {
+    const rows = await sheetsGet(`${TABS.LOANS}!A1:A1`);
+    if (rows.length && rows[0][0] === 'id') return; // already initialised
+  } catch(e) {
+    // Sheet tabs might not exist, we'll create via batchUpdate
+  }
+  // Write headers
+  await sheetsWriteAll(TABS.LOANS, [['id','borrowerName','borrowerPhone','borrowerId','purpose','principal','interestRate','termDuration','termUnit','startDate','dueDate','settlementDate','paymentSchedule','settled','createdAt']]);
+  await sheetsWriteAll(TABS.PAYMENTS, [['id','loanId','date','amount','type','note']]);
+  await sheetsWriteAll(TABS.INVESTMENTS, [['id','loanId','inv1Id','inv1Amount','inv1Pct','inv2Id','inv2Amount','inv2Pct']]);
+  await sheetsWriteAll(TABS.CONFIG, [['key','value'],['inv1Name', cfg.inv1Name],['inv2Name', cfg.inv2Name]]);
+}
+
+// ── Data serialisation ───────────────────────────────────────────
+function rowToLoan(r) {
+  return { id:r[0], borrowerName:r[1], borrowerPhone:r[2]||'', borrowerId:r[3]||'', purpose:r[4]||'',
+    principal:parseFloat(r[5])||0, interestRate:parseFloat(r[6])||0, termDuration:parseFloat(r[7])||0,
+    termUnit:r[8]||'months', startDate:r[9]||'', dueDate:r[10]||'', settlementDate:r[11]||'',
+    paymentSchedule:r[12]||'monthly', settled:r[13]==='true', createdAt:r[14]||'', payments:[] };
+}
+function loanToRow(l) {
+  return [l.id,l.borrowerName,l.borrowerPhone||'',l.borrowerId||'',l.purpose||'',
+    l.principal,l.interestRate,l.termDuration,l.termUnit,l.startDate,l.dueDate,
+    l.settlementDate||'',l.paymentSchedule,String(l.settled),l.createdAt];
+}
+function rowToPayment(r) { return { id:r[0], loanId:r[1], date:r[2], amount:parseFloat(r[3])||0, type:r[4]||'', note:r[5]||'' }; }
+function paymentToRow(p, loanId) { return [p.id, loanId, p.date, p.amount, p.type||'', p.note||'']; }
+function rowToInv(r) { return { id:r[0], loanId:r[1], inv1Id:r[2], inv1Amount:parseFloat(r[3])||0, inv1Pct:parseFloat(r[4])||0, inv2Id:r[5], inv2Amount:parseFloat(r[6])||0, inv2Pct:parseFloat(r[7])||0 }; }
+function invToRow(i) { return [i.id, i.loanId, i.inv1Id, i.inv1Amount, i.inv1Pct, i.inv2Id, i.inv2Amount, i.inv2Pct]; }
+
+// ── Sync ─────────────────────────────────────────────────────────
+function setSyncStatus(status, label) {
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot' + (status ? ' ' + status : '');
+  document.getElementById('sync-label').textContent = label;
+}
+
+async function syncData() {
+  if (syncing) return;
+  syncing = true;
+  setSyncStatus('syncing', 'Syncing…');
+  document.getElementById('btn-sync').textContent = '↻ Syncing…';
+  try {
+    // Load config / investor names
+    try {
+      const cfgRows = await sheetsGet(`${TABS.CONFIG}!A2:B10`);
+      cfgRows.forEach(r => {
+        if (r[0]==='inv1Name') state.investors[0].name = r[1];
+        if (r[0]==='inv2Name') state.investors[1].name = r[1];
+      });
+    } catch(e){}
+
+    // Load loans
+    const loanRows = await sheetsGet(`${TABS.LOANS}!A2:O5000`);
+    state.loans = loanRows.filter(r=>r[0]).map(rowToLoan);
+
+    // Load payments
+    const payRows = await sheetsGet(`${TABS.PAYMENTS}!A2:F50000`);
+    payRows.filter(r=>r[0]).forEach(r => {
+      const p = rowToPayment(r);
+      const loan = state.loans.find(l=>l.id===p.loanId);
+      if (loan) loan.payments.push(p);
+    });
+
+    // Load investments
+    const invRows = await sheetsGet(`${TABS.INVESTMENTS}!A2:H5000`);
+    state.investments = invRows.filter(r=>r[0]).map(rowToInv);
+
+    setSyncStatus('connected', 'Synced ' + new Date().toLocaleTimeString());
+    document.getElementById('last-sync-text').textContent = 'Last synced: ' + new Date().toLocaleTimeString();
+    render();
+    showToast('Data synced ✓');
+  } catch(e) {
+    setSyncStatus('error', 'Sync error');
+    showToast('Sync failed: ' + e.message, true);
+    console.error(e);
+  }
+  syncing = false;
+  document.getElementById('btn-sync').textContent = '↻ Sync';
+}
+
+// ── Write helpers ─────────────────────────────────────────────────
+async function writeLoan(loan) {
+  // Append new row
+  const rows = await sheetsGet(`${TABS.LOANS}!A2:A5000`);
+  const existing = rows.findIndex(r=>r[0]===loan.id);
+  if (existing >= 0) {
+    const rowNum = existing + 2;
+    await sheetsWriteRange(`${TABS.LOANS}!A${rowNum}:O${rowNum}`, [loanToRow(loan)]);
+  } else {
+    await sheetsAppendRows(TABS.LOANS, [loanToRow(loan)]);
+  }
+}
+
+async function updateLoanRow(loan) {
+  const rows = await sheetsGet(`${TABS.LOANS}!A2:A5000`);
+  const idx = rows.findIndex(r=>r[0]===loan.id);
+  if (idx >= 0) {
+    const rowNum = idx + 2;
+    await sheetsWriteRange(`${TABS.LOANS}!A${rowNum}:O${rowNum}`, [loanToRow(loan)]);
+  }
+}
+
+async function sheetsAppendRows(tab, rows) {
+  const r = await fetch(
+    `${baseUrl(cfg.sheetId)}/values/${encodeURIComponent(tab + '!A1')}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS&key=${cfg.apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getOAuthToken() },
+      body: JSON.stringify({ majorDimension: 'ROWS', values: rows }) }
+  );
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.status); }
+}
+
+async function sheetsWriteRange(range, values) {
+  const r = await fetch(
+    `${baseUrl(cfg.sheetId)}/values/${encodeURIComponent(range)}?valueInputOption=RAW&key=${cfg.apiKey}`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + await getOAuthToken() },
+      body: JSON.stringify({ range, majorDimension: 'ROWS', values }) }
+  );
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.status); }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function fmt(n) { return Number(n).toLocaleString('en-SG', { minimumFractionDigits:2, maximumFractionDigits:2 }); }
+function fmtDate(d) { if(!d) return '—'; try { return new Date(d+'T00:00:00').toLocaleDateString('en-SG', {day:'2-digit',month:'short',year:'numeric'}); } catch(e){ return d; } }
+function today() { return new Date().toISOString().slice(0,10); }
+function calcInterest(loan) {
+  const p = loan.principal, r = loan.interestRate, dur = loan.termDuration;
+  const months = loan.termUnit==='days' ? dur/30 : loan.termUnit==='months' ? dur : dur*12;
+  return p * (r/100) * months / 12;
+}
+function totalPaid(loan) { return (loan.payments||[]).reduce((s,p)=>s+p.amount, 0); }
+function loanStatus(loan) {
+  if (loan.settled) return 'settled';
+  const now = new Date(); const due = new Date(loan.dueDate + 'T00:00:00');
+  if (due < now) return 'overdue';
+  if (totalPaid(loan) > 0) return 'partial';
+  return 'active';
+}
+function getInv(loanId) { return state.investments.find(i=>i.loanId===loanId); }
+function invName(id) { return state.investors.find(i=>i.id===id)?.name || id; }
+function showToast(msg, err) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (err?' error':'');
+  setTimeout(()=>t.className='toast', 3000);
+}
+
+// ── Render ───────────────────────────────────────────────────────
+function render() {
+  renderMetrics();
+  renderLoanList('loans', state.loans.filter(l=>!l.settled));
+  renderLoanList('all', [...state.loans].reverse());
+  renderInvestments();
+}
+
+function renderMetrics() {
+  const active = state.loans.filter(l=>!l.settled);
+  const tp = active.reduce((s,l)=>s+l.principal,0);
+  const ti = active.reduce((s,l)=>s+calcInterest(l),0);
+  const tc = state.loans.reduce((s,l)=>s+totalPaid(l),0);
+  const ov = state.loans.filter(l=>loanStatus(l)==='overdue').length;
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Active principal</div><div class="metric-value blue">$${fmt(tp)}</div></div>
+    <div class="metric"><div class="metric-label">Expected interest</div><div class="metric-value amber">$${fmt(ti)}</div></div>
+    <div class="metric"><div class="metric-label">Total collected</div><div class="metric-value green">$${fmt(tc)}</div></div>
+    <div class="metric"><div class="metric-label">Overdue</div><div class="metric-value ${ov>0?'red':'green'}">${ov} loan${ov!==1?'s':''}</div></div>`;
+}
+
+function loanCardHtml(loan) {
+  const st = loanStatus(loan);
+  const interest = calcInterest(loan);
+  const total = loan.principal + interest;
+  const paid = totalPaid(loan);
+  const pct = total > 0 ? Math.min(100, Math.round(paid/total*100)) : 0;
+  const bm = {active:'badge-active',overdue:'badge-overdue',settled:'badge-settled',partial:'badge-partial'};
+  const inv = getInv(loan.id);
+  return `<div class="card" onclick="openLoanDetail('${loan.id}')">
+    <div class="card-header">
+      <div>
+        <div class="borrower-name">${loan.borrowerName}</div>
+        <div class="borrower-meta">${[loan.borrowerPhone,loan.borrowerId,loan.purpose].filter(Boolean).join(' · ') || 'No additional details'}</div>
+      </div>
+      <span class="badge ${bm[st]}">${st}</span>
+    </div>
+    <div class="card-stats">
+      <div class="stat"><div class="stat-label">Principal</div><div class="stat-value">$${fmt(loan.principal)}</div></div>
+      <div class="stat"><div class="stat-label">Rate</div><div class="stat-value">${loan.interestRate}% p.a.</div></div>
+      <div class="stat"><div class="stat-label">Term</div><div class="stat-value">${loan.termDuration} ${loan.termUnit}</div></div>
+      <div class="stat"><div class="stat-label">Due</div><div class="stat-value">${fmtDate(loan.dueDate)}</div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="progress-label">$${fmt(paid)} collected of $${fmt(total)} (${pct}%)</div>
+    </div>
+    ${inv?`<div class="investor-strip">
+      <span>💼</span>
+      <span class="inv-tag">${invName(inv.inv1Id)} ${inv.inv1Pct}% · $${fmt(inv.inv1Amount)}</span>
+      <span class="inv-tag">${invName(inv.inv2Id)} ${inv.inv2Pct}% · $${fmt(inv.inv2Amount)}</span>
+    </div>`:''}
+  </div>`;
+}
+
+function renderLoanList(tabId, loans) {
+  const el = document.getElementById(tabId);
+  el.innerHTML = loans.length === 0
+    ? `<div class="empty-state"><div class="empty-icon">📋</div><div>No loans here yet.</div></div>`
+    : loans.map(loanCardHtml).join('');
+}
+
+function renderInvestments() {
+  const el = document.getElementById('investments');
+  if (!state.investments.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div>No investment records yet. Add investment split when creating a loan.</div></div>';
+    return;
+  }
+  const summary = {};
+  state.investors.forEach(inv => { summary[inv.id] = { name: inv.name, principal:0, interest:0, collected:0 }; });
+  state.investments.forEach(inv => {
+    const loan = state.loans.find(l=>l.id===inv.loanId);
+    if (!loan) return;
+    const interest = calcInterest(loan);
+    const paid = totalPaid(loan);
+    const p1 = inv.inv1Pct/100, p2 = inv.inv2Pct/100;
+    if (summary[inv.inv1Id]) { summary[inv.inv1Id].principal += loan.principal*p1; summary[inv.inv1Id].interest += interest*p1; summary[inv.inv1Id].collected += paid*p1; }
+    if (summary[inv.inv2Id]) { summary[inv.inv2Id].principal += loan.principal*p2; summary[inv.inv2Id].interest += interest*p2; summary[inv.inv2Id].collected += paid*p2; }
+  });
+
+  let html = `<div style="font-size:16px;font-weight:700;margin-bottom:12px">Investor summary</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">`;
+  Object.values(summary).forEach(inv => {
+    html += `<div class="card card-nocursor">
+      <div style="font-weight:700;font-size:15px;margin-bottom:12px">👤 ${inv.name}</div>
+      <div class="metrics" style="margin-bottom:0;gap:8px">
+        <div class="metric"><div class="metric-label">Deployed</div><div class="metric-value blue" style="font-size:16px">$${fmt(inv.principal)}</div></div>
+        <div class="metric"><div class="metric-label">Interest</div><div class="metric-value amber" style="font-size:16px">$${fmt(inv.interest)}</div></div>
+        <div class="metric"><div class="metric-label">Collected</div><div class="metric-value green" style="font-size:16px">$${fmt(inv.collected)}</div></div>
+      </div>
+    </div>`;
+  });
+  html += '</div><div style="font-size:16px;font-weight:700;margin-bottom:12px">Per-loan breakdown</div>';
+
+  state.investments.forEach(inv => {
+    const loan = state.loans.find(l=>l.id===inv.loanId);
+    if (!loan) return;
+    const interest = calcInterest(loan);
+    html += `<div class="card card-nocursor">
+      <div class="flex-between mb-1">
+        <span style="font-weight:700">${loan.borrowerName}</span>
+        <span class="text-muted">$${fmt(loan.principal)} @ ${loan.interestRate}%</span>
+      </div>
+      <div class="investor-split">
+        <div class="investor-card"><div class="inv-name">${invName(inv.inv1Id)}</div>
+          <div class="inv-amt">$${fmt(inv.inv1Amount)}</div>
+          <div class="inv-pct">${inv.inv1Pct}% · interest $${fmt(interest*(inv.inv1Pct/100))}</div>
+        </div>
+        <div class="investor-card"><div class="inv-name">${invName(inv.inv2Id)}</div>
+          <div class="inv-amt">$${fmt(inv.inv2Amount)}</div>
+          <div class="inv-pct">${inv.inv2Pct}% · interest $${fmt(interest*(inv.inv2Pct/100))}</div>
+        </div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+// ── Tab switching ────────────────────────────────────────────────
+function switchTab(id, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Modal ────────────────────────────────────────────────────────
+function openModal(html) {
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+// ── New Loan modal ───────────────────────────────────────────────
+function openNewLoan() {
+  openModal(`<div class="modal-title">📝 New Loan</div>
+  <div class="section-label">Borrower details</div>
+  <div class="form-grid">
+    <div class="form-group full"><label>Borrower name *</label><input id="nl-name" type="text" placeholder="Full name" /></div>
+    <div class="form-group"><label>Phone</label><input id="nl-phone" type="text" placeholder="+65 xxxx xxxx" /></div>
+    <div class="form-group"><label>NRIC / ID</label><input id="nl-id" type="text" placeholder="Optional" /></div>
+    <div class="form-group full"><label>Purpose / notes</label><input id="nl-purpose" type="text" placeholder="e.g. business, medical, personal" /></div>
+  </div>
+  <div class="section-label">Loan terms</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Principal amount ($) *</label><input id="nl-principal" type="number" min="0" step="0.01" placeholder="0.00" oninput="autoFillDates();autoSplit()" /></div>
+    <div class="form-group"><label>Annual interest rate (%) *</label><input id="nl-rate" type="number" min="0" step="0.01" placeholder="e.g. 12" /></div>
+    <div class="form-group"><label>Term duration *</label><input id="nl-dur" type="number" min="1" placeholder="e.g. 6" oninput="autoFillDates()" /></div>
+    <div class="form-group"><label>Term unit *</label>
+      <select id="nl-unit" onchange="autoFillDates()">
+        <option value="months">Months</option>
+        <option value="days">Days</option>
+        <option value="years">Years</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Start date</label><input id="nl-start" type="date" value="${today()}" oninput="autoFillDates()" /></div>
+    <div class="form-group"><label>Due date *</label><input id="nl-due" type="date" /></div>
+    <div class="form-group"><label>Final settlement date</label><input id="nl-settle" type="date" /></div>
+    <div class="form-group"><label>Payment schedule</label>
+      <select id="nl-schedule">
+        <option value="monthly">Monthly</option>
+        <option value="weekly">Weekly</option>
+        <option value="lumpsum">Lump sum at end</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+  </div>
+  <div id="nl-interest-preview" style="background:var(--amber-bg);color:var(--amber-text);padding:8px 12px;border-radius:6px;font-size:13px;margin-top:4px;display:none"></div>
+  <div class="section-label">Investment split</div>
+  <div class="form-grid">
+    <div class="form-group"><label>${state.investors[0].name} amount ($)</label><input id="nl-inv1a" type="number" min="0" step="0.01" placeholder="0.00" oninput="calcInvFromAmt()" /></div>
+    <div class="form-group"><label>${state.investors[1].name} amount ($)</label><input id="nl-inv2a" type="number" min="0" step="0.01" placeholder="0.00" oninput="calcInvFromAmt()" /></div>
+    <div class="form-group"><label>${state.investors[0].name} share (%)</label><input id="nl-inv1p" type="number" min="0" max="100" placeholder="50" oninput="calcInvFromPct(1)" /></div>
+    <div class="form-group"><label>${state.investors[1].name} share (%)</label><input id="nl-inv2p" type="number" min="0" max="100" placeholder="50" oninput="calcInvFromPct(2)" /></div>
+  </div>
+  <div id="nl-error" class="error-msg mt-1"></div>
+  <div class="flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveLoan()" id="btn-save-loan">Save loan</button>
+  </div>`);
+  autoFillDates();
+}
+
+function autoFillDates() {
+  const start = document.getElementById('nl-start')?.value;
+  const dur = parseFloat(document.getElementById('nl-dur')?.value)||0;
+  const unit = document.getElementById('nl-unit')?.value||'months';
+  if (start && dur > 0) {
+    const d = new Date(start + 'T00:00:00');
+    if (unit==='days') d.setDate(d.getDate()+dur);
+    else if (unit==='months') d.setMonth(d.getMonth()+dur);
+    else d.setFullYear(d.getFullYear()+dur);
+    document.getElementById('nl-due').value = d.toISOString().slice(0,10);
+  }
+  // Preview
+  const p = parseFloat(document.getElementById('nl-principal')?.value)||0;
+  const r = parseFloat(document.getElementById('nl-rate')?.value)||0;
+  if (p>0 && r>0 && dur>0) {
+    const months = unit==='days'?dur/30:unit==='months'?dur:dur*12;
+    const interest = p*(r/100)*months/12;
+    const el = document.getElementById('nl-interest-preview');
+    if(el){el.style.display='block';el.textContent=`💡 Total interest: $${fmt(interest)} · Total payable: $${fmt(p+interest)}`;}
+  }
+}
+
+function calcInvFromAmt() {
+  const a1=parseFloat(document.getElementById('nl-inv1a')?.value)||0;
+  const a2=parseFloat(document.getElementById('nl-inv2a')?.value)||0;
+  const total=a1+a2;
+  if(total>0){
+    const p1=Math.round(a1/total*100*10)/10;
+    document.getElementById('nl-inv1p').value=p1;
+    document.getElementById('nl-inv2p').value=Math.round((100-p1)*10)/10;
+  }
+}
+
+function calcInvFromPct(which) {
+  const p=parseFloat(document.getElementById(`nl-inv${which}p`)?.value)||0;
+  const other=Math.round((100-p)*10)/10;
+  document.getElementById(`nl-inv${which===1?2:1}p`).value=other;
+  const principal=parseFloat(document.getElementById('nl-principal')?.value)||0;
+  if(principal>0){
+    const p1=parseFloat(document.getElementById('nl-inv1p').value)||0;
+    document.getElementById('nl-inv1a').value=(principal*p1/100).toFixed(2);
+    document.getElementById('nl-inv2a').value=(principal*(100-p1)/100).toFixed(2);
+  }
+}
+
+function autoSplit() {
+  const principal = parseFloat(document.getElementById('nl-principal')?.value)||0;
+  const p1 = parseFloat(document.getElementById('nl-inv1p')?.value)||50;
+  if(principal>0){
+    document.getElementById('nl-inv1a').value=(principal*p1/100).toFixed(2);
+    document.getElementById('nl-inv2a').value=(principal*(100-p1)/100).toFixed(2);
+  }
+}
+
+async function saveLoan() {
+  const name = document.getElementById('nl-name').value.trim();
+  const principal = parseFloat(document.getElementById('nl-principal').value)||0;
+  const rate = parseFloat(document.getElementById('nl-rate').value)||0;
+  const dur = parseFloat(document.getElementById('nl-dur').value)||0;
+  const due = document.getElementById('nl-due').value;
+  const errEl = document.getElementById('nl-error');
+  if (!name) { errEl.textContent='Borrower name is required.'; return; }
+  if (!principal||principal<=0) { errEl.textContent='Enter a valid principal amount.'; return; }
+  if (!rate||rate<=0) { errEl.textContent='Enter a valid interest rate.'; return; }
+  if (!dur||dur<=0) { errEl.textContent='Enter a valid term duration.'; return; }
+  if (!due) { errEl.textContent='Due date is required.'; return; }
+  errEl.textContent='';
+
+  const btn = document.getElementById('btn-save-loan');
+  btn.textContent = 'Saving…'; btn.disabled=true;
+
+  const loan = {
+    id: uid(), borrowerName: name,
+    borrowerPhone: document.getElementById('nl-phone').value,
+    borrowerId: document.getElementById('nl-id').value,
+    purpose: document.getElementById('nl-purpose').value,
+    principal, interestRate: rate,
+    termDuration: dur,
+    termUnit: document.getElementById('nl-unit').value,
+    startDate: document.getElementById('nl-start').value,
+    dueDate: due,
+    settlementDate: document.getElementById('nl-settle').value,
+    paymentSchedule: document.getElementById('nl-schedule').value,
+    settled: false, createdAt: today(), payments: []
+  };
+
+  const inv1a = parseFloat(document.getElementById('nl-inv1a').value)||0;
+  const inv1p = parseFloat(document.getElementById('nl-inv1p').value)||0;
+  const inv2a = parseFloat(document.getElementById('nl-inv2a').value)||0;
+  const inv2p = parseFloat(document.getElementById('nl-inv2p').value)||0;
+  let invRec = null;
+  if (inv1a>0||inv2a>0) {
+    invRec = { id:uid(), loanId:loan.id, inv1Id:state.investors[0].id, inv1Amount:inv1a, inv1Pct:inv1p, inv2Id:state.investors[1].id, inv2Amount:inv2a, inv2Pct:inv2p };
+  }
+
+  try {
+    await sheetsAppendRows(TABS.LOANS, [loanToRow(loan)]);
+    if (invRec) await sheetsAppendRows(TABS.INVESTMENTS, [invToRow(invRec)]);
+    state.loans.push(loan);
+    if (invRec) state.investments.push(invRec);
+    render();
+    closeModal();
+    showToast('Loan saved ✓');
+  } catch(e) {
+    errEl.textContent = 'Save failed: ' + e.message;
+    btn.textContent='Save loan'; btn.disabled=false;
+  }
+}
+
+// ── Loan detail modal ────────────────────────────────────────────
+function openLoanDetail(id) {
+  const loan = state.loans.find(l=>l.id===id);
+  if (!loan) return;
+  const interest = calcInterest(loan);
+  const total = loan.principal + interest;
+  const paid = totalPaid(loan);
+  const remaining = Math.max(0, total-paid);
+  const st = loanStatus(loan);
+  const bm = {active:'badge-active',overdue:'badge-overdue',settled:'badge-settled',partial:'badge-partial'};
+  const inv = getInv(loan.id);
+
+  const paymentsHtml = loan.payments.length === 0
+    ? '<div class="text-muted" style="padding:12px 0;font-size:13px">No payments recorded yet.</div>'
+    : loan.payments.slice().reverse().map(p=>`<div class="payment-row">
+        <span>${fmtDate(p.date)}</span>
+        <span class="payment-type">${p.type}</span>
+        <span style="font-weight:700;color:var(--green)">+$${fmt(p.amount)}</span>
+        <span class="text-muted">${p.note||'—'}</span>
+        <button class="btn btn-sm btn-danger" onclick="deletePayment('${id}','${p.id}')" title="Delete payment">✕</button>
+      </div>`).join('');
+
+  openModal(`
+  <div class="flex-between" style="margin-bottom:16px">
+    <div class="modal-title" style="margin-bottom:0">${loan.borrowerName} <span class="badge ${bm[st]}" style="margin-left:8px">${st}</span></div>
+    <button class="btn btn-sm" onclick="closeModal()">✕ Close</button>
+  </div>
+  <div class="detail-grid">
+    <div class="detail-item"><div class="detail-label">Phone</div><div class="detail-val">${loan.borrowerPhone||'—'}</div></div>
+    <div class="detail-item"><div class="detail-label">ID / NRIC</div><div class="detail-val">${loan.borrowerId||'—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Purpose</div><div class="detail-val">${loan.purpose||'—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Schedule</div><div class="detail-val">${loan.paymentSchedule}</div></div>
+    <div class="detail-item"><div class="detail-label">Start date</div><div class="detail-val">${fmtDate(loan.startDate)}</div></div>
+    <div class="detail-item"><div class="detail-label">Due date</div><div class="detail-val">${fmtDate(loan.dueDate)}</div></div>
+    <div class="detail-item"><div class="detail-label">Settlement date</div><div class="detail-val">${fmtDate(loan.settlementDate)}</div></div>
+    <div class="detail-item"><div class="detail-label">Term</div><div class="detail-val">${loan.termDuration} ${loan.termUnit}</div></div>
+  </div>
+  <div class="metrics" style="margin-bottom:16px;gap:8px">
+    <div class="metric"><div class="metric-label">Principal</div><div class="metric-value blue" style="font-size:18px">$${fmt(loan.principal)}</div></div>
+    <div class="metric"><div class="metric-label">Interest</div><div class="metric-value amber" style="font-size:18px">$${fmt(interest)}</div></div>
+    <div class="metric"><div class="metric-label">Collected</div><div class="metric-value green" style="font-size:18px">$${fmt(paid)}</div></div>
+    <div class="metric"><div class="metric-label">Remaining</div><div class="metric-value red" style="font-size:18px">$${fmt(remaining)}</div></div>
+  </div>
+  ${inv?`<div class="section-label">Investment split</div>
+  <div class="investor-split" style="margin-bottom:16px">
+    <div class="investor-card"><div class="inv-name">${invName(inv.inv1Id)}</div><div class="inv-amt">$${fmt(inv.inv1Amount)}</div><div class="inv-pct">${inv.inv1Pct}% · interest $${fmt(interest*(inv.inv1Pct/100))}</div></div>
+    <div class="investor-card"><div class="inv-name">${invName(inv.inv2Id)}</div><div class="inv-amt">$${fmt(inv.inv2Amount)}</div><div class="inv-pct">${inv.inv2Pct}% · interest $${fmt(interest*(inv.inv2Pct/100))}</div></div>
+  </div>`:''}
+  <div class="section-label">Record a payment</div>
+  <div class="form-grid" style="margin-bottom:12px">
+    <div class="form-group"><label>Date</label><input type="date" id="pay-date" value="${today()}" /></div>
+    <div class="form-group"><label>Amount ($)</label><input type="number" id="pay-amount" min="0" step="0.01" placeholder="0.00" /></div>
+    <div class="form-group"><label>Payment type</label>
+      <select id="pay-type">
+        <option value="monthly">Monthly instalment</option>
+        <option value="weekly">Weekly instalment</option>
+        <option value="partial">Partial payment</option>
+        <option value="interest">Interest only</option>
+        <option value="full">Full settlement</option>
+        <option value="penalty">Penalty / late fee</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Note</label><input type="text" id="pay-note" placeholder="Optional reference" /></div>
+  </div>
+  <div class="flex" style="justify-content:space-between;margin-bottom:16px">
+    <button class="btn btn-success btn-sm" id="btn-add-pay" onclick="addPayment('${id}')">+ Add payment</button>
+    ${!loan.settled?`<button class="btn btn-sm" style="color:var(--green);border-color:#5DCAA5" onclick="markSettled('${id}')">✓ Mark as settled</button>`:''}
+  </div>
+  <div class="section-label">Payment history (${loan.payments.length})</div>
+  <div id="pay-hist-${id}">${paymentsHtml}</div>
+  <hr class="divider">
+  <div class="flex-between">
+    <button class="btn btn-sm" onclick="closeModal()">Close</button>
+    <button class="btn btn-sm btn-danger" onclick="deleteLoan('${id}')">🗑 Delete loan</button>
+  </div>`);
+}
+
+async function addPayment(loanId) {
+  const loan = state.loans.find(l=>l.id===loanId);
+  if (!loan) return;
+  const amount = parseFloat(document.getElementById('pay-amount').value)||0;
+  if (!amount||amount<=0) { showToast('Enter a valid amount', true); return; }
+  const btn = document.getElementById('btn-add-pay');
+  btn.textContent='Saving…'; btn.disabled=true;
+  const payment = { id:uid(), loanId, date:document.getElementById('pay-date').value||today(), amount, type:document.getElementById('pay-type').value, note:document.getElementById('pay-note').value };
+  try {
+    await sheetsAppendRows(TABS.PAYMENTS, [paymentToRow(payment, loanId)]);
+    if (!loan.payments) loan.payments=[];
+    loan.payments.push(payment);
+    if (payment.type==='full') {
+      loan.settled=true;
+      await updateLoanRow(loan);
+    }
+    render();
+    closeModal();
+    openLoanDetail(loanId);
+    showToast('Payment recorded ✓');
+  } catch(e) {
+    showToast('Failed: '+e.message, true);
+    btn.textContent='+ Add payment'; btn.disabled=false;
+  }
+}
+
+async function deletePayment(loanId, payId) {
+  if (!confirm('Delete this payment record?')) return;
+  const loan = state.loans.find(l=>l.id===loanId);
+  if (!loan) return;
+  loan.payments = loan.payments.filter(p=>p.id!==payId);
+  try {
+    // Rewrite all payments for this loan
+    const allPayRows = await sheetsGet(`${TABS.PAYMENTS}!A2:F50000`);
+    const updated = [['id','loanId','date','amount','type','note'],
+      ...allPayRows.filter(r=>r[0]&&r[0]!==payId)];
+    await sheetsWriteAll(TABS.PAYMENTS, updated);
+    render();
+    closeModal();
+    openLoanDetail(loanId);
+    showToast('Payment deleted');
+  } catch(e) { showToast('Delete failed: '+e.message, true); }
+}
+
+async function markSettled(loanId) {
+  const loan = state.loans.find(l=>l.id===loanId);
+  if (!loan) return;
+  loan.settled=true;
+  try {
+    await updateLoanRow(loan);
+    render();
+    closeModal();
+    showToast('Loan marked as settled ✓');
+  } catch(e) { showToast('Update failed: '+e.message, true); }
+}
+
+async function deleteLoan(loanId) {
+  if (!confirm('Permanently delete this loan and all its payment records?')) return;
+  state.loans = state.loans.filter(l=>l.id!==loanId);
+  state.investments = state.investments.filter(i=>i.loanId!==loanId);
+  try {
+    const loanRows = await sheetsGet(`${TABS.LOANS}!A2:O5000`);
+    await sheetsWriteAll(TABS.LOANS, [loanRows[0]?['id','borrowerName','borrowerPhone','borrowerId','purpose','principal','interestRate','termDuration','termUnit','startDate','dueDate','settlementDate','paymentSchedule','settled','createdAt']:['id','borrowerName','borrowerPhone','borrowerId','purpose','principal','interestRate','termDuration','termUnit','startDate','dueDate','settlementDate','paymentSchedule','settled','createdAt'],
+      ...loanRows.filter(r=>r[0]&&r[0]!==loanId)]);
+    const payRows = await sheetsGet(`${TABS.PAYMENTS}!A2:F50000`);
+    await sheetsWriteAll(TABS.PAYMENTS, [['id','loanId','date','amount','type','note'],...payRows.filter(r=>r[0]&&r[1]!==loanId)]);
+    const invRows = await sheetsGet(`${TABS.INVESTMENTS}!A2:H5000`);
+    await sheetsWriteAll(TABS.INVESTMENTS, [['id','loanId','inv1Id','inv1Amount','inv1Pct','inv2Id','inv2Amount','inv2Pct'],...invRows.filter(r=>r[0]&&r[1]!==loanId)]);
+    render();
+    closeModal();
+    showToast('Loan deleted');
+  } catch(e) { showToast('Delete failed: '+e.message, true); }
+}
+
+// ── Setup / connect ──────────────────────────────────────────────
+function showSetup() {
+  document.getElementById('setup-screen').style.display='block';
+  document.getElementById('app-screen').style.display='none';
+  if (cfg) {
+    document.getElementById('cfg-sheet-id').value = cfg.sheetId||'';
+    document.getElementById('cfg-api-key').value = cfg.apiKey||'';
+    document.getElementById('cfg-inv1').value = cfg.inv1Name||'Investor A';
+    document.getElementById('cfg-inv2').value = cfg.inv2Name||'Investor B';
+  }
+}
+
+async function connectSheet() {
+  const sheetId = document.getElementById('cfg-sheet-id').value.trim();
+  const apiKey = document.getElementById('cfg-api-key').value.trim();
+  const inv1Name = document.getElementById('cfg-inv1').value.trim()||'Investor A';
+  const inv2Name = document.getElementById('cfg-inv2').value.trim()||'Investor B';
+  const errEl = document.getElementById('setup-error');
+  if (!sheetId) { errEl.textContent='Sheet ID is required.'; return; }
+  if (!apiKey) { errEl.textContent='API Key is required.'; return; }
+  errEl.textContent='';
+  const btn = document.querySelector('[onclick="connectSheet()"]');
+  document.getElementById('connect-btn-text').textContent='Connecting…';
+  btn.disabled=true;
+
+  cfg = { sheetId, apiKey, inv1Name, inv2Name };
+  state.investors[0].name = inv1Name;
+  state.investors[1].name = inv2Name;
+
+  try {
+    // Test read
+    await fetch(`${baseUrl(sheetId)}/values/A1?key=${apiKey}`).then(r=>{ if(!r.ok) throw new Error('Invalid Sheet ID or API Key'); });
+    // Try to init headers
+    try { await initSheet(); } catch(e) { /* may need OAuth, skip */ }
+    saveCfg();
+    document.getElementById('setup-screen').style.display='none';
+    document.getElementById('app-screen').style.display='block';
+    await syncData();
+  } catch(e) {
+    errEl.textContent = 'Connection failed: ' + e.message + '. Check your Sheet ID and API Key.';
+    document.getElementById('connect-btn-text').textContent='Connect & initialise sheet';
+    btn.disabled=false;
+  }
+}
+
+// ── Boot ─────────────────────────────────────────────────────────
+if (loadCfg()) {
+  state.investors[0].name = cfg.inv1Name||'Investor A';
+  state.investors[1].name = cfg.inv2Name||'Investor B';
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  document.getElementById('cfg-sheet-id').value=cfg.sheetId||'';
+  document.getElementById('cfg-api-key').value=cfg.apiKey||'';
+  document.getElementById('cfg-inv1').value=cfg.inv1Name||'Investor A';
+  document.getElementById('cfg-inv2').value=cfg.inv2Name||'Investor B';
+  syncData();
+} else {
+  document.getElementById('setup-screen').style.display='block';
+}
+// Auto-sync every 60 seconds
+setInterval(()=>{ if(cfg && document.getElementById('app-screen').style.display!=='none') syncData(); }, 60000);
+</script>
+
+<!-- Load Google Identity Services for OAuth (needed for writes) -->
+<script src="https://accounts.google.com/gsi/client" async></script>
+
+</body>
+</html>
