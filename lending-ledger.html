@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lending Ledger</title>
+<style>
+:root{
+  --bg:#f5f4f0;--surface:#fff;--surface2:#f0ede6;--border:#e2ddd6;--border2:#c8c3ba;
+  --text:#1a1916;--text2:#6b6860;--text3:#9b9890;
+  --blue:#185FA5;--blue-bg:#E6F1FB;--blue-text:#0C447C;
+  --green:#0F6E56;--green-bg:#E1F5EE;--green-text:#085041;
+  --amber:#BA7517;--amber-bg:#FEF3DC;--amber-text:#7A4A05;
+  --red:#A32D2D;--red-bg:#FEF0F0;--red-text:#7A1F1F;
+  --gray-bg:#E4E2D9;--gray-text:#4A4845;
+  --radius:10px;--radius-sm:6px;
+  --shadow:0 1px 4px rgba(0,0,0,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+/* Topbar */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:50;box-shadow:var(--shadow)}
+.logo{font-size:16px;font-weight:800;letter-spacing:-0.3px}.logo span{color:var(--blue)}
+.sync-status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2)}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--gray-bg);flex-shrink:0}
+.sync-dot.connected{background:#1D9E75}.sync-dot.syncing{background:var(--amber);animation:pulse 1s infinite}.sync-dot.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+/* Layout */
+.container{max-width:1000px;margin:0 auto;padding:20px 16px}
+/* Setup */
+.setup-wrap{max-width:540px;margin:48px auto}
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow)}
+.setup-title{font-size:20px;font-weight:800;margin-bottom:4px}
+.setup-sub{color:var(--text2);font-size:13px;margin-bottom:20px;line-height:1.6}
+.step{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-body{flex:1;font-size:13px;line-height:1.65;color:var(--text2)}.step-body strong{color:var(--text)}.step-body a{color:var(--blue)}
+/* Forms */
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px}
+input,select,textarea{font-family:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);width:100%;transition:border-color 0.15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,0.1)}
+.btn{font-family:inherit;padding:8px 16px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:all 0.15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn:hover{background:var(--surface2);border-color:var(--border2)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}.btn-primary:hover{background:var(--blue-text)}
+.btn-success{background:var(--green);color:#fff;border-color:var(--green)}.btn-success:hover{background:var(--green-text)}
+.btn-danger{background:var(--red-bg);color:var(--red-text);border-color:#EEB8B8}.btn-danger:hover{background:#FADDDD}
+.btn-sm{padding:4px 10px;font-size:12px}
+.error-msg{color:var(--red);font-size:12px;padding:3px 0}
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;font-family:inherit}
+.tab:hover{color:var(--text)}.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.section{display:none}.section.active{display:block}
+/* Metrics */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.metric-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px}
+.metric-value{font-size:20px;font-weight:800;line-height:1}
+.metric-value.blue{color:var(--blue)}.metric-value.green{color:var(--green)}.metric-value.amber{color:var(--amber)}.metric-value.red{color:var(--red)}
+/* Loan cards */
+.loan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:box-shadow 0.15s,border-color 0.15s}
+.loan-card:hover{box-shadow:var(--shadow);border-color:var(--border2)}
+.lc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.lc-name{font-size:15px;font-weight:800}.lc-meta{font-size:12px;color:var(--text2);margin-top:2px}
+.lc-badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.badge{display:inline-block;padding:2px 8px;border-radius:16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px}
+.badge-active{background:var(--green-bg);color:var(--green-text)}.badge-overdue{background:var(--red-bg);color:var(--red-text)}
+.badge-settled{background:var(--gray-bg);color:var(--gray-text)}.badge-partial{background:var(--amber-bg);color:var(--amber-text)}
+.lc-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+.lc-stat .sl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;font-weight:600}
+.lc-stat .sv{font-size:13px;font-weight:700;margin-top:1px}
+/* Interest schedule pills on card */
+.sched-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.sched-pill{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:14px;font-size:11px;font-weight:600;border:1px solid}
+.sched-pill.collected{background:var(--green-bg);color:var(--green-text);border-color:#9DE0C8}
+.sched-pill.overdue{background:var(--red-bg);color:var(--red-text);border-color:#EEB8B8}
+.sched-pill.upcoming{background:var(--blue-bg);color:var(--blue-text);border-color:#B5D4F4}
+.sched-pill.today{background:var(--amber-bg);color:var(--amber-text);border-color:#FAC775}
+.inv-strip{display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);flex-wrap:wrap}
+.inv-chip{background:var(--blue-bg);color:var(--blue-text);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700}
+/* Reminders */
+.reminders-wrap{margin-bottom:20px}
+.rem-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.rem-count{background:var(--red-bg);color:var(--red-text);padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700}
+.rem-row{display:flex;align-items:center;gap:10px;padding:9px 13px;border-radius:var(--radius-sm);margin-bottom:5px;cursor:pointer;transition:opacity 0.15s;border:1px solid transparent}
+.rem-row:hover{opacity:0.82}
+.rem-row.overdue{background:var(--red-bg);border-color:#EEB8B8}
+.rem-row.today{background:var(--amber-bg);border-color:#FAC775}
+.rem-row.soon{background:var(--blue-bg);border-color:#B5D4F4}
+.rem-body{flex:1;min-width:0}
+.rem-name{font-weight:700;font-size:13px}
+.rem-detail{font-size:11px;color:var(--text2);margin-top:1px}
+.rem-right{text-align:right;flex-shrink:0}
+.rem-amt{font-weight:800;font-size:13px}
+.rem-label{font-size:11px;font-weight:600;margin-top:1px}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.48);display:none;align-items:center;justify-content:center;z-index:200;padding:12px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:22px;width:660px;max-width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.18)}
+.modal-title{font-size:17px;font-weight:800;margin-bottom:16px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.full{grid-column:1/-1}
+.sec-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin:14px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+/* Rate toggle */
+.rate-toggle{display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.rt-btn{flex:1;padding:8px 6px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:transparent;color:var(--text2);font-family:inherit;transition:all 0.15s;text-align:center}
+.rt-btn.active{background:var(--blue);color:#fff}
+/* Interest schedule builder */
+.sched-builder{background:var(--surface2);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)}
+.sched-entry{display:grid;grid-template-columns:1fr 120px 36px;gap:8px;align-items:center;margin-bottom:8px}
+.sched-entry:last-child{margin-bottom:0}
+.collected-toggle{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;background:var(--surface);white-space:nowrap}
+.collected-toggle.yes{background:var(--green-bg);color:var(--green-text);border-color:#9DE0C8}
+.collected-toggle.no{background:var(--surface2);color:var(--text2)}
+/* Detail modal */
+.detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.dl{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.4px}
+.dv{font-size:13px;font-weight:600;margin-top:2px}
+.ibox{background:var(--surface2);border-radius:var(--radius-sm);padding:10px 13px;font-size:13px;margin-bottom:14px;line-height:1.8;border:1px solid var(--border)}
+.ibox b{color:var(--text)}
+/* Schedule detail table */
+.sched-table{width:100%;border-collapse:collapse;font-size:13px}
+.sched-table th{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left}
+.sched-table td{padding:8px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.sched-table tr:last-child td{border-bottom:none}
+.sched-table tr.row-collected td{background:var(--green-bg)}
+.sched-table tr.row-overdue td{background:var(--red-bg)}
+.sched-table tr.row-today td{background:var(--amber-bg)}
+.collect-btn{padding:4px 10px;font-size:11px;font-weight:700;border-radius:14px;cursor:pointer;border:1px solid;transition:all 0.15s;font-family:inherit}
+.collect-btn.yes{background:var(--green-bg);color:var(--green-text);border-color:#9DE0C8}
+.collect-btn.no{background:var(--surface2);color:var(--text2);border-color:var(--border)}
+.collect-btn.no:hover{background:var(--green-bg);color:var(--green-text)}
+/* Investor split */
+.inv-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.inv-card{background:var(--surface2);border-radius:var(--radius-sm);padding:10px;text-align:center;border:1px solid var(--border)}
+.inv-n{font-size:11px;color:var(--text2);margin-bottom:3px;font-weight:600}
+.inv-a{font-size:17px;font-weight:800}.inv-p{font-size:11px;color:var(--text3);margin-top:2px}
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--text);color:#fff;padding:10px 16px;border-radius:var(--radius-sm);font-size:13px;z-index:999;opacity:0;transform:translateY(6px);transition:all 0.22s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}.toast.error{background:var(--red)}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.flex-end{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.flex-between{display:flex;justify-content:space-between;align-items:center}
+.flex{display:flex;gap:8px;align-items:center}
+.divider{border:none;border-top:1px solid var(--border);margin:14px 0}
+.text-muted{color:var(--text3);font-size:12px}
+.mt1{margin-top:8px}.mb1{margin-bottom:8px}
+.empty-state{text-align:center;padding:28px;color:var(--text3);font-size:14px}
+@media(max-width:580px){.form-grid{grid-template-columns:1fr}.lc-grid{grid-template-columns:repeat(3,1fr)}.detail-grid{grid-template-columns:1fr 1fr}.metrics{grid-template-columns:repeat(2,1fr)}.sched-entry{grid-template-columns:1fr 100px 32px}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Lending <span>Ledger</span></div>
+  <div class="sync-status">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-label">Not connected</span>
+    <button class="btn btn-sm" onclick="showSetup()" style="margin-left:4px">⚙ Settings</button>
+  </div>
+</div>
+
+<!-- Setup -->
+<div id="setup-screen" class="container">
+  <div class="setup-wrap">
+    <div class="setup-card">
+      <div class="setup-title">Connect to Google Sheets</div>
+      <div class="setup-sub">All data syncs to your shared Google Sheet in real time.</div>
+      <div style="margin-bottom:4px">
+        <div class="step"><div class="step-num">1</div><div class="step-body">Open your Google Sheet → <strong>Extensions → Apps Script</strong> → paste <strong>Code.gs</strong> → Save</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Deploy → New deployment</strong> → Web app → Execute as: Me → Who has access: Anyone → Deploy → copy URL</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body">Paste URL below. Share same HTML + URL with Yoga.</div></div>
+      </div>
+      <div style="margin-top:16px">
+        <div class="form-group" style="margin-bottom:12px">
+          <label>Apps Script Web App URL</label>
+          <input type="text" id="cfg-url" value="https://script.google.com/macros/s/AKfycbyvci3UKpNuFeN7OPVu7tczuGwMRYZGHt-03cEP7DQ8svn6hEymYh2RPo49n2yRtpln/exec"/>
+        </div>
+        <div class="form-grid">
+          <div class="form-group"><label>Investor 1</label><input type="text" id="cfg-inv1" value="Kannan"/></div>
+          <div class="form-group"><label>Investor 2</label><input type="text" id="cfg-inv2" value="Yoga"/></div>
+        </div>
+      </div>
+      <div id="setup-error" class="error-msg mt1"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="connectApp()"><span id="connect-btn-text">Connect</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app-screen" class="container" style="display:none">
+  <div class="flex-between mb1" style="margin-bottom:18px">
+    <div>
+      <div style="font-size:20px;font-weight:800;letter-spacing:-0.4px">Dashboard</div>
+      <div class="text-muted" id="last-sync-text">Loading…</div>
+    </div>
+    <div class="flex">
+      <button class="btn" onclick="syncData()" id="btn-sync">↻ Sync</button>
+      <button class="btn btn-primary" onclick="openNewLoan()">+ New Loan</button>
+    </div>
+  </div>
+  <div class="metrics" id="metrics"></div>
+  <div class="reminders-wrap" id="reminders-wrap"></div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('loans',this)">Active Loans</button>
+    <button class="tab" onclick="switchTab('all',this)">All Loans</button>
+    <button class="tab" onclick="switchTab('investments',this)">Investments</button>
+  </div>
+  <div id="loans" class="section active"></div>
+  <div id="all" class="section"></div>
+  <div id="investments" class="section"></div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-body"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────
+const LS_KEY='ll_cfg_v4';
+let cfg=null;
+let state={loans:[],investors:[{id:'inv1',name:'Kannan'},{id:'inv2',name:'Yoga'}],investments:[]};
+let syncing=false;
+
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function loadCfg(){const s=lsGet(LS_KEY);if(s){try{cfg=JSON.parse(s);return true}catch(e){}}return false}
+function saveCfg(){lsSet(LS_KEY,JSON.stringify(cfg))}
+
+async function apiCall(action,data={}){
+  const res=await fetch(cfg.scriptUrl+'?action='+action,{
+    method:action==='getAll'?'GET':'POST',
+    ...(action!=='getAll'?{headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data})}:{})
+  });
+  const text=await res.text();
+  try{return JSON.parse(text)}catch(e){throw new Error('Bad response: '+text.slice(0,120))}
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function fmt(n){return Number(n||0).toLocaleString('en-SG',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function fmtDate(d){if(!d)return '—';try{return new Date(d+'T00:00:00').toLocaleDateString('en-SG',{day:'2-digit',month:'short',year:'numeric'})}catch(e){return d}}
+function today(){return new Date().toISOString().slice(0,10)}
+function addMonths(s,n){const d=new Date(s+'T00:00:00');d.setMonth(d.getMonth()+n);return d.toISOString().slice(0,10)}
+function daysDiff(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/(1000*60*60*24))}
+
+// ── Interest calculation ──────────────────────────────────────────
+// rateType: 'per_month' | 'per_annum'
+function calcTotalInterest(loan){
+  const p=parseFloat(loan.principal)||0;
+  const r=parseFloat(loan.interestRate)||0;
+  const m=parseFloat(loan.termMonths)||0;
+  if(loan.rateType==='per_month') return p*(r/100)*m;
+  return p*(r/100)*(m/12);
+}
+function calcMonthlyInterest(loan){
+  const p=parseFloat(loan.principal)||0;
+  const r=parseFloat(loan.interestRate)||0;
+  if(loan.rateType==='per_month') return p*(r/100);
+  return p*(r/100)/12;
+}
+
+// ── Schedule helpers ──────────────────────────────────────────────
+// loan.schedule = [{date:'2026-05-01', collected:false, note:''}, ...]
+function schedStatus(entry){
+  if(entry.collected) return 'collected';
+  const d=daysDiff(today(),entry.date);
+  if(d<0) return 'overdue';
+  if(d===0) return 'today';
+  return 'upcoming';
+}
+function schedLabel(entry){
+  const st=schedStatus(entry);
+  if(st==='collected') return '✓ Collected';
+  if(st==='overdue'){const d=Math.abs(daysDiff(today(),entry.date));return `Overdue ${d}d`}
+  if(st==='today') return 'Due today';
+  const d=daysDiff(today(),entry.date);
+  return `In ${d}d`;
+}
+
+// ── Loan derived values ───────────────────────────────────────────
+function loanStatus(loan){
+  if(loan.settled) return 'settled';
+  const now=today();
+  if(loan.finalRepaymentDate&&loan.finalRepaymentDate<now) return 'overdue';
+  const sched=loan.schedule||[];
+  if(sched.some(e=>!e.collected&&e.date<now)) return 'overdue';
+  if(sched.some(e=>e.collected)) return 'partial';
+  return 'active';
+}
+function collectedInterest(loan){
+  return (loan.schedule||[]).filter(e=>e.collected).reduce((s,e)=>{
+    return s+(parseFloat(e.amount)||calcMonthlyInterest(loan));
+  },0);
+}
+function pendingInterest(loan){
+  return (loan.schedule||[]).filter(e=>!e.collected).reduce((s,e)=>{
+    return s+(parseFloat(e.amount)||calcMonthlyInterest(loan));
+  },0);
+}
+function getInv(loanId){return state.investments.find(i=>i.loanId===loanId)}
+function invName(id){return state.investors.find(i=>i.id===id)?.name||id}
+
+function showToast(msg,err){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show'+(err?' error':'');
+  setTimeout(()=>t.className='toast',3000);
+}
+function setSyncStatus(s,label){
+  document.getElementById('sync-dot').className='sync-dot'+(s?' '+s:'');
+  document.getElementById('sync-label').textContent=label;
+}
+
+// ── Sync ──────────────────────────────────────────────────────────
+async function syncData(){
+  if(syncing)return;syncing=true;
+  setSyncStatus('syncing','Syncing…');
+  document.getElementById('btn-sync').innerHTML='<span class="spinner"></span>';
+  try{
+    const data=await apiCall('getAll');
+    if(data.error)throw new Error(data.error);
+    state.loans=data.loans||[];
+    state.investments=data.investments||[];
+    if(data.config){
+      if(data.config.inv1Name)state.investors[0].name=data.config.inv1Name;
+      if(data.config.inv2Name)state.investors[1].name=data.config.inv2Name;
+    }
+    setSyncStatus('connected','Synced '+new Date().toLocaleTimeString());
+    document.getElementById('last-sync-text').textContent='Synced: '+new Date().toLocaleTimeString();
+    render();showToast('Synced ✓');
+  }catch(e){setSyncStatus('error','Sync failed');showToast('Sync error: '+e.message,true)}
+  syncing=false;
+  document.getElementById('btn-sync').textContent='↻ Sync';
+}
+
+// ── Render ────────────────────────────────────────────────────────
+function render(){
+  renderMetrics();
+  renderReminders();
+  renderLoanList('loans',state.loans.filter(l=>!l.settled));
+  renderLoanList('all',[...state.loans].reverse());
+  renderInvestments();
+}
+
+function renderMetrics(){
+  const active=state.loans.filter(l=>!l.settled);
+  const totalPrincipal=active.reduce((s,l)=>s+(parseFloat(l.principal)||0),0);
+  const totalInterest=active.reduce((s,l)=>s+calcTotalInterest(l),0);
+  const totalCollected=state.loans.reduce((s,l)=>s+collectedInterest(l),0);
+  const overdueCount=state.loans.filter(l=>loanStatus(l)==='overdue').length;
+  document.getElementById('metrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Active principal</div><div class="metric-value blue">$${fmt(totalPrincipal)}</div></div>
+    <div class="metric"><div class="metric-label">Total interest</div><div class="metric-value amber">$${fmt(totalInterest)}</div></div>
+    <div class="metric"><div class="metric-label">Interest collected</div><div class="metric-value green">$${fmt(totalCollected)}</div></div>
+    <div class="metric"><div class="metric-label">Overdue</div><div class="metric-value ${overdueCount>0?'red':'green'}">${overdueCount} loan${overdueCount!==1?'s':''}</div></div>`;
+}
+
+function renderReminders(){
+  const el=document.getElementById('reminders-wrap');
+  const todayStr=today();
+  const reminders=[];
+  state.loans.filter(l=>!l.settled).forEach(loan=>{
+    (loan.schedule||[]).forEach(entry=>{
+      if(entry.collected)return;
+      const d=daysDiff(todayStr,entry.date);
+      if(d>7)return; // only within 7 days or overdue
+      const amt=parseFloat(entry.amount)||calcMonthlyInterest(loan);
+      const urgency=d<0?'overdue':d===0?'today':'soon';
+      const label=d<0?`Overdue by ${Math.abs(d)}d`:d===0?'Due today':`Due in ${d}d`;
+      reminders.push({loan,entry,amt,urgency,label,d});
+    });
+    // final repayment reminder
+    if(loan.finalRepaymentDate){
+      const d=daysDiff(todayStr,loan.finalRepaymentDate);
+      if(d<=7&&d>=-90&&!loan.principalRepaid){
+        const urgency=d<0?'overdue':d===0?'today':'soon';
+        const label=d<0?`Principal overdue ${Math.abs(d)}d`:d===0?'Principal due today':`Principal due in ${d}d`;
+        reminders.push({loan,entry:null,amt:parseFloat(loan.principal)||0,urgency,label,d,isPrincipal:true});
+      }
+    }
+  });
+  if(!reminders.length){el.innerHTML='';return}
+  reminders.sort((a,b)=>a.d-b.d);
+  const icons={overdue:'🔴',today:'🟠',soon:'🔵'};
+  let html=`<div class="rem-title">⏰ Payment reminders <span class="rem-count">${reminders.length}</span></div>`;
+  reminders.forEach(r=>{
+    const inv=getInv(r.loan.id);
+    const invLine=inv?`${invName(inv.inv1Id)} ${inv.inv1Pct}% / ${invName(inv.inv2Id)} ${inv.inv2Pct}%`:'';
+    const tag=r.isPrincipal?'PRINCIPAL':'INTEREST';
+    html+=`<div class="rem-row ${r.urgency}" onclick="openLoanDetail('${r.loan.id}')">
+      <span style="font-size:15px">${icons[r.urgency]}</span>
+      <div class="rem-body">
+        <div class="rem-name">${r.loan.borrowerName} ${r.loan.borrowerPhone?'· '+r.loan.borrowerPhone:''}</div>
+        <div class="rem-detail">${tag} · ${fmtDate(r.entry?r.entry.date:r.loan.finalRepaymentDate)} ${invLine?'· '+invLine:''}</div>
+      </div>
+      <div class="rem-right">
+        <div class="rem-amt">$${fmt(r.amt)}</div>
+        <div class="rem-label" style="color:${r.urgency==='overdue'?'var(--red-text)':r.urgency==='today'?'var(--amber-text)':'var(--blue-text)'}">${r.label}</div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+function loanCardHtml(loan){
+  const st=loanStatus(loan);
+  const bm={active:'badge-active',overdue:'badge-overdue',settled:'badge-settled',partial:'badge-partial'};
+  const inv=getInv(loan.id);
+  const rateLabel=loan.rateType==='per_month'?`${loan.interestRate}%/mo`:`${loan.interestRate}% p.a.`;
+  const totalInt=calcTotalInterest(loan);
+  const colInt=collectedInterest(loan);
+  const pendInt=pendingInterest(loan);
+  const sched=loan.schedule||[];
+
+  const pillsHtml=sched.map(e=>{
+    const st2=schedStatus(e);
+    return `<span class="sched-pill ${st2}">${fmtDate(e.date)} — ${schedLabel(e)}</span>`;
+  }).join('');
+
+  return `<div class="loan-card" onclick="openLoanDetail('${loan.id}')">
+    <div class="lc-header">
+      <div>
+        <div class="lc-name">${loan.invNo?`<span style="font-size:11px;color:var(--text3);font-weight:600">${loan.invNo} · </span>`:''}${loan.borrowerName}</div>
+        <div class="lc-meta">${[loan.borrowerPhone,loan.borrowerId,loan.purpose].filter(Boolean).join(' · ')||'No extra details'}</div>
+      </div>
+      <div class="lc-badges"><span class="badge ${bm[st]}">${st}</span></div>
+    </div>
+    <div class="lc-grid">
+      <div class="lc-stat"><div class="sl">Principal</div><div class="sv">$${fmt(loan.principal)}</div></div>
+      <div class="lc-stat"><div class="sl">Rate</div><div class="sv">${rateLabel}</div></div>
+      <div class="lc-stat"><div class="sl">Term</div><div class="sv">${loan.termMonths} mo</div></div>
+      <div class="lc-stat"><div class="sl">Int collected</div><div class="sv" style="color:var(--green)">$${fmt(colInt)}</div></div>
+      <div class="lc-stat"><div class="sl">Int pending</div><div class="sv" style="color:${pendInt>0?'var(--amber)':'var(--text3)'}">$${fmt(pendInt)}</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Final repayment: <b>${fmtDate(loan.finalRepaymentDate)}</b> · Total payable: <b>$${fmt((parseFloat(loan.principal)||0)+totalInt)}</b></div>
+    ${sched.length?`<div class="sched-pills">${pillsHtml}</div>`:''}
+    ${inv?`<div class="inv-strip"><span style="font-size:11px;color:var(--text3)">💼</span>
+      <span class="inv-chip">${invName(inv.inv1Id)} $${fmt(inv.inv1Amount)} (${inv.inv1Pct}%)</span>
+      <span class="inv-chip">${invName(inv.inv2Id)} $${fmt(inv.inv2Amount)} (${inv.inv2Pct}%)</span>
+    </div>`:''}
+  </div>`;
+}
+
+function renderLoanList(tabId,loans){
+  document.getElementById(tabId).innerHTML=loans.length===0
+    ?'<div class="empty-state">📋 No loans here yet.</div>'
+    :loans.map(loanCardHtml).join('');
+}
+
+function renderInvestments(){
+  const el=document.getElementById('investments');
+  if(!state.investments.length){el.innerHTML='<div class="empty-state">📊 No investment records yet.</div>';return}
+  const summary={};
+  state.investors.forEach(i=>{summary[i.id]={name:i.name,principal:0,interest:0,collected:0}});
+  state.investments.forEach(inv=>{
+    const loan=state.loans.find(l=>l.id===inv.loanId);if(!loan)return;
+    const p1=inv.inv1Pct/100,p2=inv.inv2Pct/100;
+    const ti=calcTotalInterest(loan);const ci=collectedInterest(loan);
+    if(summary[inv.inv1Id]){summary[inv.inv1Id].principal+=(parseFloat(loan.principal)||0)*p1;summary[inv.inv1Id].interest+=ti*p1;summary[inv.inv1Id].collected+=ci*p1}
+    if(summary[inv.inv2Id]){summary[inv.inv2Id].principal+=(parseFloat(loan.principal)||0)*p2;summary[inv.inv2Id].interest+=ti*p2;summary[inv.inv2Id].collected+=ci*p2}
+  });
+  let html='<div style="font-size:15px;font-weight:800;margin-bottom:12px">Investor summary</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">';
+  Object.values(summary).forEach(inv=>{
+    html+=`<div class="loan-card" style="cursor:default"><div style="font-weight:800;font-size:14px;margin-bottom:10px">👤 ${inv.name}</div>
+      <div class="metrics" style="margin-bottom:0;gap:8px">
+        <div class="metric"><div class="metric-label">Deployed</div><div class="metric-value blue" style="font-size:16px">$${fmt(inv.principal)}</div></div>
+        <div class="metric"><div class="metric-label">Total int.</div><div class="metric-value amber" style="font-size:16px">$${fmt(inv.interest)}</div></div>
+        <div class="metric"><div class="metric-label">Collected</div><div class="metric-value green" style="font-size:16px">$${fmt(inv.collected)}</div></div>
+      </div></div>`;
+  });
+  html+='</div><div style="font-size:15px;font-weight:800;margin-bottom:12px">Per-loan breakdown</div>';
+  state.investments.forEach(inv=>{
+    const loan=state.loans.find(l=>l.id===inv.loanId);if(!loan)return;
+    const ti=calcTotalInterest(loan);
+    const rateLabel=loan.rateType==='per_month'?`${loan.interestRate}%/mo`:`${loan.interestRate}% p.a.`;
+    html+=`<div class="loan-card" style="cursor:default">
+      <div class="flex-between mb1"><span style="font-weight:800">${loan.invNo?loan.invNo+' · ':''}${loan.borrowerName}</span><span class="text-muted">$${fmt(loan.principal)} @ ${rateLabel} · ${loan.termMonths}mo</span></div>
+      <div class="inv-split">
+        <div class="inv-card"><div class="inv-n">${invName(inv.inv1Id)}</div><div class="inv-a">$${fmt(inv.inv1Amount)}</div><div class="inv-p">${inv.inv1Pct}% · int $${fmt(ti*(inv.inv1Pct/100))}</div></div>
+        <div class="inv-card"><div class="inv-n">${invName(inv.inv2Id)}</div><div class="inv-a">$${fmt(inv.inv2Amount)}</div><div class="inv-p">${inv.inv2Pct}% · int $${fmt(ti*(inv.inv2Pct/100))}</div></div>
+      </div></div>`;
+  });
+  el.innerHTML=html;
+}
+
+// ── Tabs & Modal ──────────────────────────────────────────────────
+function switchTab(id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');document.getElementById(id).classList.add('active');
+}
+function openModal(html){document.getElementById('modal-body').innerHTML=html;document.getElementById('modal-overlay').classList.add('open')}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open')}
+
+// ── Rate toggle ───────────────────────────────────────────────────
+let _rateType='per_month'; // default per month matching your Excel
+function setRateType(t,pfx){
+  _rateType=t;
+  document.getElementById(pfx+'-rt-pa').classList.toggle('active',t==='per_annum');
+  document.getElementById(pfx+'-rt-pm').classList.toggle('active',t==='per_month');
+  document.getElementById(pfx+'-rate-hint').textContent=t==='per_month'?'% per month':'% per annum';
+  updatePreview(pfx);
+}
+
+// ── Schedule builder ──────────────────────────────────────────────
+let _schedEntries=[]; // [{id, date, amount, collected, note}]
+
+function renderSchedBuilder(){
+  const cont=document.getElementById('sched-builder-rows');if(!cont)return;
+  const monthly=calcMonthlyFromForm();
+  if(!_schedEntries.length){cont.innerHTML='<div class="text-muted" style="padding:6px 0">No dates added yet.</div>';return}
+  cont.innerHTML=_schedEntries.map((e,i)=>`
+    <div class="sched-entry" id="se-${e.id}">
+      <input type="date" value="${e.date}" onchange="updateSchedEntry('${e.id}','date',this.value)"/>
+      <input type="number" min="0" step="0.01" value="${e.amount||''}" placeholder="${monthly>0?monthly.toFixed(2):'Amount'}" onchange="updateSchedEntry('${e.id}','amount',this.value)"/>
+      <button class="btn btn-sm btn-danger" onclick="removeSchedEntry('${e.id}')">✕</button>
+    </div>`).join('');
+}
+
+function calcMonthlyFromForm(){
+  const p=parseFloat(document.getElementById('nl-principal')?.value||document.getElementById('el-principal')?.value)||0;
+  const r=parseFloat(document.getElementById('nl-rate')?.value||document.getElementById('el-rate')?.value)||0;
+  if(!p||!r)return 0;
+  if(_rateType==='per_month')return p*(r/100);
+  return p*(r/100)/12;
+}
+
+function addSchedEntry(){
+  const monthly=calcMonthlyFromForm();
+  _schedEntries.push({id:uid(),date:'',amount:monthly>0?monthly.toFixed(2):'',collected:false,note:''});
+  renderSchedBuilder();
+}
+
+function updateSchedEntry(id,field,val){
+  const e=_schedEntries.find(e=>e.id===id);if(e)e[field]=val;
+}
+
+function removeSchedEntry(id){
+  _schedEntries=_schedEntries.filter(e=>e.id!==id);
+  renderSchedBuilder();
+}
+
+function autoGenSchedule(){
+  const start=document.getElementById('nl-start')?.value||document.getElementById('el-start')?.value;
+  const months=parseInt(document.getElementById('nl-months')?.value||document.getElementById('el-months')?.value)||0;
+  const monthly=calcMonthlyFromForm();
+  if(!start||!months){showToast('Enter start date and term first',true);return}
+  _schedEntries=[];
+  for(let i=1;i<=months;i++){
+    _schedEntries.push({id:uid(),date:addMonths(start,i),amount:monthly>0?monthly.toFixed(2):'',collected:false,note:''});
+  }
+  renderSchedBuilder();
+}
+
+// ── Preview calculation ───────────────────────────────────────────
+function updatePreview(pfx){
+  const p=parseFloat(document.getElementById(pfx+'-principal')?.value)||0;
+  const r=parseFloat(document.getElementById(pfx+'-rate')?.value)||0;
+  const m=parseInt(document.getElementById(pfx+'-months')?.value)||0;
+  const el=document.getElementById(pfx+'-preview');if(!el)return;
+  if(p>0&&r>0&&m>0){
+    let interest,monthly;
+    if(_rateType==='per_month'){interest=p*(r/100)*m;monthly=p*(r/100)}
+    else{interest=p*(r/100)*(m/12);monthly=p*(r/100)/12}
+    el.style.display='block';
+    el.innerHTML=`<b>Total interest:</b> $${fmt(interest)} · <b>Total payable:</b> $${fmt(p+interest)}<br><span style="color:var(--text2)">Monthly interest: <b>$${fmt(monthly)}</b> per month</span>`;
+  }else{el.style.display='none'}
+}
+
+function autoSetDueDate(pfx){
+  const start=document.getElementById(pfx+'-start')?.value;
+  const months=parseInt(document.getElementById(pfx+'-months')?.value)||0;
+  if(start&&months>0){
+    const due=document.getElementById(pfx+'-due');
+    if(due)due.value=addMonths(start,months);
+  }
+  updatePreview(pfx);
+}
+
+// ── New Loan ──────────────────────────────────────────────────────
+function openNewLoan(){
+  _rateType='per_month';
+  _schedEntries=[];
+  openModal(`<div class="modal-title">📝 New Loan</div>
+  <div class="sec-label">Loan reference</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Investment No.</label><input id="nl-invno" type="text" placeholder="e.g. Inv 7"/></div>
+    <div class="form-group"><label>Investment date</label><input id="nl-invdate" type="date" value="${today()}"/></div>
+  </div>
+  <div class="sec-label">Borrower details</div>
+  <div class="form-grid">
+    <div class="form-group full"><label>Borrower name *</label><input id="nl-name" type="text" placeholder="Full name"/></div>
+    <div class="form-group"><label>Phone</label><input id="nl-phone" type="text" placeholder="+65 xxxx xxxx"/></div>
+    <div class="form-group"><label>NRIC / ID</label><input id="nl-id" type="text" placeholder="Optional"/></div>
+    <div class="form-group full"><label>Purpose</label><input id="nl-purpose" type="text" placeholder="e.g. business, personal"/></div>
+  </div>
+  <div class="sec-label">Loan terms</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Principal / Borrow amount ($) *</label><input id="nl-principal" type="number" min="0" step="0.01" placeholder="0.00" oninput="updatePreview('nl');renderSchedBuilder()"/></div>
+    <div class="form-group">
+      <label>Interest rate <span id="nl-rate-hint" style="font-weight:400;text-transform:none;font-size:11px">% per month</span></label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="nl-rate" type="number" min="0" step="0.01" placeholder="e.g. 5" oninput="updatePreview('nl');renderSchedBuilder()" style="flex:1"/>
+        <div class="rate-toggle" style="width:110px;flex-shrink:0">
+          <button class="rt-btn" id="nl-rt-pa" onclick="setRateType('per_annum','nl')">p.a.</button>
+          <button class="rt-btn active" id="nl-rt-pm" onclick="setRateType('per_month','nl')">p.m.</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-group"><label>Term (months) *</label><input id="nl-months" type="number" min="1" placeholder="e.g. 3" oninput="autoSetDueDate('nl');renderSchedBuilder()"/></div>
+    <div class="form-group"><label>Start date</label><input id="nl-start" type="date" value="${today()}" oninput="autoSetDueDate('nl')"/></div>
+    <div class="form-group"><label>Final repayment date</label><input id="nl-due" type="date"/></div>
+    <div class="form-group"><label>Principal repaid?</label>
+      <select id="nl-repaid"><option value="false">Not yet</option><option value="true">Yes — repaid</option></select>
+    </div>
+  </div>
+  <div id="nl-preview" class="ibox" style="display:none;margin-top:8px"></div>
+  <div class="sec-label">Interest schedule <span style="font-weight:400;text-transform:none;font-size:11px">(dates to collect interest)</span></div>
+  <div class="sched-builder">
+    <div id="sched-builder-rows"></div>
+    <div class="flex" style="margin-top:10px;gap:6px">
+      <button class="btn btn-sm" onclick="addSchedEntry()">+ Add date</button>
+      <button class="btn btn-sm" onclick="autoGenSchedule()">⚡ Auto-generate from term</button>
+    </div>
+  </div>
+  <div class="sec-label">Investment split</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Kannan amount ($)</label><input id="nl-inv1a" type="number" min="0" step="0.01" placeholder="0.00" oninput="calcInvAmt('nl')"/></div>
+    <div class="form-group"><label>Yoga amount ($)</label><input id="nl-inv2a" type="number" min="0" step="0.01" placeholder="0.00" oninput="calcInvAmt('nl')"/></div>
+    <div class="form-group"><label>Kannan % share</label><input id="nl-inv1p" type="number" min="0" max="100" placeholder="50" oninput="calcInvPct('nl',1)"/></div>
+    <div class="form-group"><label>Yoga % share</label><input id="nl-inv2p" type="number" min="0" max="100" placeholder="50" oninput="calcInvPct('nl',2)"/></div>
+  </div>
+  <div id="nl-error" class="error-msg mt1"></div>
+  <div class="flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="btn-nl-save" onclick="saveLoan()">Save loan</button></div>`);
+  renderSchedBuilder();
+}
+
+function calcInvAmt(pfx){
+  const a1=parseFloat(document.getElementById(pfx+'-inv1a')?.value)||0;
+  const a2=parseFloat(document.getElementById(pfx+'-inv2a')?.value)||0;
+  const t=a1+a2;if(t>0){
+    const p1=Math.round(a1/t*1000)/10;
+    const e1=document.getElementById(pfx+'-inv1p');const e2=document.getElementById(pfx+'-inv2p');
+    if(e1)e1.value=p1;if(e2)e2.value=Math.round((100-p1)*10)/10;
+  }
+}
+function calcInvPct(pfx,which){
+  const p=parseFloat(document.getElementById(`${pfx}-inv${which}p`)?.value)||0;
+  const other=Math.round((100-p)*10)/10;
+  const oe=document.getElementById(`${pfx}-inv${which===1?2:1}p`);if(oe)oe.value=other;
+  const pr=parseFloat(document.getElementById(pfx+'-principal')?.value)||0;
+  if(pr>0){
+    const p1=parseFloat(document.getElementById(pfx+'-inv1p')?.value)||0;
+    const e1=document.getElementById(pfx+'-inv1a');const e2=document.getElementById(pfx+'-inv2a');
+    if(e1)e1.value=(pr*p1/100).toFixed(2);if(e2)e2.value=(pr*(100-p1)/100).toFixed(2);
+  }
+}
+
+async function saveLoan(){
+  const name=document.getElementById('nl-name').value.trim();
+  const principal=parseFloat(document.getElementById('nl-principal').value)||0;
+  const rate=parseFloat(document.getElementById('nl-rate').value)||0;
+  const months=parseInt(document.getElementById('nl-months').value)||0;
+  const due=document.getElementById('nl-due').value;
+  const err=document.getElementById('nl-error');
+  if(!name){err.textContent='Borrower name required.';return}
+  if(!principal){err.textContent='Enter a principal amount.';return}
+  if(!rate){err.textContent='Enter an interest rate.';return}
+  if(!months){err.textContent='Enter the term in months.';return}
+  if(!due){err.textContent='Final repayment date required.';return}
+  err.textContent='';
+  const btn=document.getElementById('btn-nl-save');btn.textContent='Saving…';btn.disabled=true;
+  const loan={
+    id:uid(),invNo:document.getElementById('nl-invno').value.trim(),
+    invDate:document.getElementById('nl-invdate').value,
+    borrowerName:name,borrowerPhone:document.getElementById('nl-phone').value,
+    borrowerId:document.getElementById('nl-id').value,purpose:document.getElementById('nl-purpose').value,
+    principal,interestRate:rate,rateType:_rateType,termMonths:months,
+    startDate:document.getElementById('nl-start').value,
+    finalRepaymentDate:due,
+    principalRepaid:document.getElementById('nl-repaid').value==='true',
+    settled:false,createdAt:today(),
+    schedule:_schedEntries.map(e=>({id:e.id,date:e.date,amount:parseFloat(e.amount)||0,collected:e.collected,note:e.note||''}))
+  };
+  const inv1a=parseFloat(document.getElementById('nl-inv1a').value)||0;
+  const inv1p=parseFloat(document.getElementById('nl-inv1p').value)||0;
+  const inv2a=parseFloat(document.getElementById('nl-inv2a').value)||0;
+  const inv2p=parseFloat(document.getElementById('nl-inv2p').value)||0;
+  let invRec=null;
+  if(inv1a>0||inv2a>0){invRec={id:uid(),loanId:loan.id,inv1Id:state.investors[0].id,inv1Amount:inv1a,inv1Pct:inv1p,inv2Id:state.investors[1].id,inv2Amount:inv2a,inv2Pct:inv2p}}
+  try{
+    const r=await apiCall('saveLoan',{loan,investment:invRec});
+    if(r.error)throw new Error(r.error);
+    loan.schedule=loan.schedule||[];
+    state.loans.push(loan);
+    if(invRec)state.investments.push(invRec);
+    render();closeModal();showToast('Loan saved ✓');
+  }catch(e){err.textContent='Save failed: '+e.message;btn.textContent='Save loan';btn.disabled=false}
+}
+
+// ── Loan detail ───────────────────────────────────────────────────
+function openLoanDetail(id){
+  const loan=state.loans.find(l=>l.id===id);if(!loan)return;
+  const st=loanStatus(loan);
+  const bm={active:'badge-active',overdue:'badge-overdue',settled:'badge-settled',partial:'badge-partial'};
+  const inv=getInv(id);
+  const rateLabel=loan.rateType==='per_month'?`${loan.interestRate}% per month`:`${loan.interestRate}% per annum`;
+  const totalInt=calcTotalInterest(loan);
+  const colInt=collectedInterest(loan);
+  const pendInt=pendingInterest(loan);
+  const monthlyInt=calcMonthlyInterest(loan);
+
+  const schedHtml=(loan.schedule||[]).length===0
+    ?'<div class="text-muted" style="padding:8px 0">No interest schedule defined.</div>'
+    :`<table class="sched-table"><thead><tr><th>#</th><th>Date</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>`+
+    (loan.schedule||[]).map((e,i)=>{
+      const st2=schedStatus(e);
+      const rowCls=st2==='collected'?'row-collected':st2==='overdue'?'row-overdue':st2==='today'?'row-today':'';
+      return `<tr class="${rowCls}">
+        <td>${i+1}</td>
+        <td><b>${fmtDate(e.date)}</b></td>
+        <td>$${fmt(e.amount||monthlyInt)}</td>
+        <td><span class="badge ${st2==='collected'?'badge-active':st2==='overdue'?'badge-overdue':'badge-partial'}">${st2}</span></td>
+        <td><button class="collect-btn ${e.collected?'yes':'no'}" onclick="toggleCollected('${id}','${e.id}',event)">${e.collected?'✓ Collected':'Mark collected'}</button></td>
+      </tr>`;
+    }).join('')+'</tbody></table>';
+
+  openModal(`<div class="flex-between" style="margin-bottom:14px">
+    <div class="modal-title" style="margin-bottom:0">${loan.invNo?`<span style="font-size:12px;color:var(--text3)">${loan.invNo} · </span>`:''}${loan.borrowerName} <span class="badge ${bm[st]}" style="margin-left:6px">${st}</span></div>
+    <button class="btn btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="detail-grid">
+    <div><div class="dl">Phone</div><div class="dv">${loan.borrowerPhone||'—'}</div></div>
+    <div><div class="dl">NRIC / ID</div><div class="dv">${loan.borrowerId||'—'}</div></div>
+    <div><div class="dl">Purpose</div><div class="dv">${loan.purpose||'—'}</div></div>
+    <div><div class="dl">Investment date</div><div class="dv">${fmtDate(loan.invDate)}</div></div>
+    <div><div class="dl">Start date</div><div class="dv">${fmtDate(loan.startDate)}</div></div>
+    <div><div class="dl">Final repayment</div><div class="dv">${fmtDate(loan.finalRepaymentDate)}</div></div>
+    <div><div class="dl">Term</div><div class="dv">${loan.termMonths} months</div></div>
+    <div><div class="dl">Rate</div><div class="dv">${rateLabel}</div></div>
+    <div><div class="dl">Principal repaid</div><div class="dv">${loan.principalRepaid?'✓ Yes':'Not yet'}</div></div>
+  </div>
+  <div class="ibox">
+    <b>Principal:</b> $${fmt(loan.principal)} &nbsp;·&nbsp; <b>Total interest:</b> $${fmt(totalInt)} &nbsp;·&nbsp; <b>Total payable:</b> $${fmt((parseFloat(loan.principal)||0)+totalInt)}<br>
+    <b style="color:var(--green)">Collected:</b> $${fmt(colInt)} &nbsp;·&nbsp; <b style="color:var(--amber)">Pending:</b> $${fmt(pendInt)} &nbsp;·&nbsp; Monthly: $${fmt(monthlyInt)}
+  </div>
+  ${inv?`<div class="sec-label">Investment split</div>
+  <div class="inv-split" style="margin-bottom:14px">
+    <div class="inv-card"><div class="inv-n">${invName(inv.inv1Id)}</div><div class="inv-a">$${fmt(inv.inv1Amount)}</div><div class="inv-p">${inv.inv1Pct}% · int $${fmt(totalInt*(inv.inv1Pct/100))}</div></div>
+    <div class="inv-card"><div class="inv-n">${invName(inv.inv2Id)}</div><div class="inv-a">$${fmt(inv.inv2Amount)}</div><div class="inv-p">${inv.inv2Pct}% · int $${fmt(totalInt*(inv.inv2Pct/100))}</div></div>
+  </div>`:''}
+  <div class="sec-label">Interest schedule</div>
+  ${schedHtml}
+  <div class="divider"></div>
+  <div class="flex-between">
+    <div class="flex">
+      <button class="btn btn-sm" onclick="closeModal()">Close</button>
+      ${!loan.principalRepaid?`<button class="btn btn-sm btn-success" onclick="markPrincipalRepaid('${id}')">✓ Principal repaid</button>`:''}
+      ${!loan.settled?`<button class="btn btn-sm" style="color:var(--green);border-color:#5DCAA5" onclick="markSettled('${id}')">✓ Fully settled</button>`:''}
+    </div>
+    <div class="flex">
+      <button class="btn btn-sm" onclick="openEditLoan('${id}')">✏️ Edit</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteLoan('${id}')">🗑 Delete</button>
+    </div>
+  </div>`);
+}
+
+async function toggleCollected(loanId,entryId,evt){
+  evt.stopPropagation();
+  const loan=state.loans.find(l=>l.id===loanId);if(!loan)return;
+  const entry=(loan.schedule||[]).find(e=>e.id===entryId);if(!entry)return;
+  entry.collected=!entry.collected;
+  try{
+    const r=await apiCall('updateLoan',{loan});if(r.error)throw new Error(r.error);
+    render();closeModal();openLoanDetail(loanId);
+    showToast(entry.collected?'Interest marked collected ✓':'Marked as not collected');
+  }catch(e){entry.collected=!entry.collected;showToast('Failed: '+e.message,true)}
+}
+
+async function markPrincipalRepaid(loanId){
+  const loan=state.loans.find(l=>l.id===loanId);if(!loan)return;
+  loan.principalRepaid=true;
+  try{const r=await apiCall('updateLoan',{loan});if(r.error)throw new Error(r.error);render();closeModal();openLoanDetail(loanId);showToast('Principal marked repaid ✓')}
+  catch(e){showToast('Failed: '+e.message,true)}
+}
+
+async function markSettled(loanId){
+  const loan=state.loans.find(l=>l.id===loanId);if(!loan)return;
+  loan.settled=true;loan.principalRepaid=true;
+  (loan.schedule||[]).forEach(e=>e.collected=true);
+  try{const r=await apiCall('updateLoan',{loan});if(r.error)throw new Error(r.error);render();closeModal();showToast('Loan fully settled ✓')}
+  catch(e){showToast('Failed: '+e.message,true)}
+}
+
+async function deleteLoan(loanId){
+  if(!confirm('Delete this loan permanently?'))return;
+  try{
+    const r=await apiCall('deleteLoan',{loanId});if(r.error)throw new Error(r.error);
+    state.loans=state.loans.filter(l=>l.id!==loanId);
+    state.investments=state.investments.filter(i=>i.loanId!==loanId);
+    render();closeModal();showToast('Loan deleted');
+  }catch(e){showToast('Failed: '+e.message,true)}
+}
+
+// ── Edit Loan ─────────────────────────────────────────────────────
+function openEditLoan(id){
+  const loan=state.loans.find(l=>l.id===id);if(!loan)return;
+  const inv=getInv(id);
+  _rateType=loan.rateType||'per_month';
+  _schedEntries=(loan.schedule||[]).map(e=>({...e}));
+  openModal(`<div class="modal-title">✏️ Edit Loan</div>
+  <div class="sec-label">Loan reference</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Investment No.</label><input id="el-invno" type="text" value="${loan.invNo||''}"/></div>
+    <div class="form-group"><label>Investment date</label><input id="el-invdate" type="date" value="${loan.invDate||''}"/></div>
+  </div>
+  <div class="sec-label">Borrower details</div>
+  <div class="form-grid">
+    <div class="form-group full"><label>Borrower name *</label><input id="el-name" type="text" value="${loan.borrowerName}"/></div>
+    <div class="form-group"><label>Phone</label><input id="el-phone" type="text" value="${loan.borrowerPhone||''}"/></div>
+    <div class="form-group"><label>NRIC / ID</label><input id="el-id" type="text" value="${loan.borrowerId||''}"/></div>
+    <div class="form-group full"><label>Purpose</label><input id="el-purpose" type="text" value="${loan.purpose||''}"/></div>
+  </div>
+  <div class="sec-label">Loan terms</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Principal ($) *</label><input id="el-principal" type="number" min="0" step="0.01" value="${loan.principal}" oninput="updatePreview('el');renderSchedBuilder()"/></div>
+    <div class="form-group">
+      <label>Interest rate <span id="el-rate-hint" style="font-weight:400;text-transform:none;font-size:11px">${_rateType==='per_month'?'% per month':'% per annum'}</span></label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="el-rate" type="number" min="0" step="0.01" value="${loan.interestRate}" oninput="updatePreview('el');renderSchedBuilder()" style="flex:1"/>
+        <div class="rate-toggle" style="width:110px;flex-shrink:0">
+          <button class="rt-btn ${_rateType==='per_annum'?'active':''}" id="el-rt-pa" onclick="setRateType('per_annum','el')">p.a.</button>
+          <button class="rt-btn ${_rateType==='per_month'?'active':''}" id="el-rt-pm" onclick="setRateType('per_month','el')">p.m.</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-group"><label>Term (months) *</label><input id="el-months" type="number" min="1" value="${loan.termMonths}" oninput="autoSetDueDate('el')"/></div>
+    <div class="form-group"><label>Start date</label><input id="el-start" type="date" value="${loan.startDate||''}"/></div>
+    <div class="form-group"><label>Final repayment date</label><input id="el-due" type="date" value="${loan.finalRepaymentDate||''}"/></div>
+    <div class="form-group"><label>Principal repaid?</label>
+      <select id="el-repaid"><option value="false" ${!loan.principalRepaid?'selected':''}>Not yet</option><option value="true" ${loan.principalRepaid?'selected':''}>Yes — repaid</option></select>
+    </div>
+  </div>
+  <div id="el-preview" class="ibox" style="display:none;margin-top:8px"></div>
+  <div class="sec-label">Interest schedule</div>
+  <div class="sched-builder">
+    <div id="sched-builder-rows"></div>
+    <div class="flex" style="margin-top:10px;gap:6px">
+      <button class="btn btn-sm" onclick="addSchedEntry()">+ Add date</button>
+      <button class="btn btn-sm" onclick="autoGenSchedule()">⚡ Auto-generate from term</button>
+    </div>
+  </div>
+  <div class="sec-label">Investment split</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Kannan amount ($)</label><input id="el-inv1a" type="number" min="0" step="0.01" value="${inv?inv.inv1Amount:''}"/></div>
+    <div class="form-group"><label>Yoga amount ($)</label><input id="el-inv2a" type="number" min="0" step="0.01" value="${inv?inv.inv2Amount:''}"/></div>
+    <div class="form-group"><label>Kannan % share</label><input id="el-inv1p" type="number" min="0" max="100" value="${inv?inv.inv1Pct:50}"/></div>
+    <div class="form-group"><label>Yoga % share</label><input id="el-inv2p" type="number" min="0" max="100" value="${inv?inv.inv2Pct:50}"/></div>
+  </div>
+  <div id="el-error" class="error-msg mt1"></div>
+  <div class="flex-end">
+    <button class="btn" onclick="openLoanDetail('${id}')">← Back</button>
+    <button class="btn btn-primary" id="btn-el-save" onclick="saveEditLoan('${id}')">Save changes</button>
+  </div>`);
+  renderSchedBuilder();
+  updatePreview('el');
+}
+
+async function saveEditLoan(id){
+  const loan=state.loans.find(l=>l.id===id);if(!loan)return;
+  const name=document.getElementById('el-name').value.trim();
+  const principal=parseFloat(document.getElementById('el-principal').value)||0;
+  const rate=parseFloat(document.getElementById('el-rate').value)||0;
+  const months=parseInt(document.getElementById('el-months').value)||0;
+  const due=document.getElementById('el-due').value;
+  const err=document.getElementById('el-error');
+  if(!name){err.textContent='Name required.';return}
+  if(!principal){err.textContent='Enter principal.';return}
+  if(!rate){err.textContent='Enter interest rate.';return}
+  if(!due){err.textContent='Repayment date required.';return}
+  err.textContent='';
+  const btn=document.getElementById('btn-el-save');btn.textContent='Saving…';btn.disabled=true;
+  loan.invNo=document.getElementById('el-invno').value.trim();
+  loan.invDate=document.getElementById('el-invdate').value;
+  loan.borrowerName=name;loan.borrowerPhone=document.getElementById('el-phone').value;
+  loan.borrowerId=document.getElementById('el-id').value;loan.purpose=document.getElementById('el-purpose').value;
+  loan.principal=principal;loan.interestRate=rate;loan.rateType=_rateType;
+  loan.termMonths=months;loan.startDate=document.getElementById('el-start').value;
+  loan.finalRepaymentDate=due;
+  loan.principalRepaid=document.getElementById('el-repaid').value==='true';
+  loan.schedule=_schedEntries.map(e=>({id:e.id,date:e.date,amount:parseFloat(e.amount)||0,collected:!!e.collected,note:e.note||''}));
+  const inv1a=parseFloat(document.getElementById('el-inv1a').value)||0;
+  const inv1p=parseFloat(document.getElementById('el-inv1p').value)||0;
+  const inv2a=parseFloat(document.getElementById('el-inv2a').value)||0;
+  const inv2p=parseFloat(document.getElementById('el-inv2p').value)||0;
+  try{
+    const r=await apiCall('updateLoan',{loan});if(r.error)throw new Error(r.error);
+    let inv=getInv(id);
+    if(inv1a>0||inv2a>0){
+      if(inv){inv.inv1Amount=inv1a;inv.inv1Pct=inv1p;inv.inv2Amount=inv2a;inv.inv2Pct=inv2p;await apiCall('updateInvestment',{investment:inv})}
+      else{const ni={id:uid(),loanId:id,inv1Id:state.investors[0].id,inv1Amount:inv1a,inv1Pct:inv1p,inv2Id:state.investors[1].id,inv2Amount:inv2a,inv2Pct:inv2p};await apiCall('saveLoan',{loan:null,investment:ni});state.investments.push(ni)}
+    }
+    render();closeModal();openLoanDetail(id);showToast('Loan updated ✓');
+  }catch(e){err.textContent='Save failed: '+e.message;btn.textContent='Save changes';btn.disabled=false}
+}
+
+// ── Setup ─────────────────────────────────────────────────────────
+function showSetup(){
+  document.getElementById('setup-screen').style.display='block';
+  document.getElementById('app-screen').style.display='none';
+}
+async function connectApp(){
+  const url=document.getElementById('cfg-url').value.trim();
+  const inv1=document.getElementById('cfg-inv1').value.trim()||'Kannan';
+  const inv2=document.getElementById('cfg-inv2').value.trim()||'Yoga';
+  const err=document.getElementById('setup-error');
+  if(!url||!url.includes('script.google.com')){err.textContent='Enter a valid Apps Script URL.';return}
+  err.textContent='';
+  document.getElementById('connect-btn-text').textContent='Connecting…';
+  cfg={scriptUrl:url,inv1Name:inv1,inv2Name:inv2};
+  state.investors[0].name=inv1;state.investors[1].name=inv2;
+  try{
+    const data=await apiCall('getAll');if(data.error)throw new Error(data.error);
+    await apiCall('saveConfig',{config:{inv1Name:inv1,inv2Name:inv2}});
+    saveCfg();
+    document.getElementById('setup-screen').style.display='none';
+    document.getElementById('app-screen').style.display='block';
+    state.loans=data.loans||[];state.investments=data.investments||[];
+    setSyncStatus('connected','Connected');
+    document.getElementById('last-sync-text').textContent='Connected '+new Date().toLocaleTimeString();
+    render();showToast('Connected ✓');
+  }catch(e){
+    err.textContent='Failed: '+e.message;
+    document.getElementById('connect-btn-text').textContent='Connect';cfg=null;
+  }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────
+if(loadCfg()){
+  state.investors[0].name=cfg.inv1Name||'Kannan';
+  state.investors[1].name=cfg.inv2Name||'Yoga';
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  syncData();
+}
+setInterval(()=>{if(cfg&&document.getElementById('app-screen').style.display!=='none')syncData()},60000);
+</script>
+</body>
+</html>
