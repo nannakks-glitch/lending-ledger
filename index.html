@@ -176,7 +176,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);bo
       <div style="margin-top:16px">
         <div class="form-group" style="margin-bottom:12px">
           <label>Apps Script Web App URL</label>
-          <input type="text" id="cfg-url" value="https://script.google.com/macros/s/AKfycbyvci3UKpNuFeN7OPVu7tczuGwMRYZGHt-03cEP7DQ8svn6hEymYh2RPo49n2yRtpln/exec"/>
+          <input type="text" id="cfg-url" value="https://script.google.com/macros/s/AKfycbxhD0C24DKC7sF30IX_d_1oHp8k2HZvyBuifv_uWUzDP8_rdDuTl--EY9tyI_VqE0um/exec"/>
         </div>
         <div class="form-grid">
           <div class="form-group"><label>Investor 1</label><input type="text" id="cfg-inv1" value="Kannan"/></div>
@@ -917,7 +917,7 @@ async function saveEditLoan(id){
 
   try{
     // Save loan — use upsert: try update first, if not found append as new row
-    const r=await apiCall('upsertLoan',{loan:updated});
+    const r=await apiCall('updateLoan',{loan:updated});
     if(r.error)throw new Error(r.error);
 
     // Only update in-memory state AFTER confirmed server save
