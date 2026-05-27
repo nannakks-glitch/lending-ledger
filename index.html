@@ -213,7 +213,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);bo
   <div id="investments" class="section"></div>
 </div>
 
-<div class="modal-overlay" id="modal-overlay" id="modal-overlay-bg">
+<div class="modal-overlay" id="modal-overlay">
   <div class="modal" id="modal-body"></div>
 </div>
 <div class="toast" id="toast"></div>
@@ -980,6 +980,18 @@ async function connectApp(){
 }
 
 // ── Boot ──────────────────────────────────────────────────────────
+// ESC key closes modal only when it's safe (not a form)
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape'){
+    const overlay=document.getElementById('modal-overlay');
+    if(overlay.classList.contains('open')){
+      // Only close if it's a detail view (has Close button but no Save button)
+      const hasSave=document.getElementById('btn-nl-save')||document.getElementById('btn-el-save');
+      if(!hasSave) closeModal();
+    }
+  }
+});
+
 if(loadCfg()){
   state.investors[0].name=cfg.inv1Name||'Kannan';
   state.investors[1].name=cfg.inv2Name||'Yoga';
