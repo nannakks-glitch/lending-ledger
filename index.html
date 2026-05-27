@@ -213,7 +213,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);bo
   <div id="investments" class="section"></div>
 </div>
 
-<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal-overlay" id="modal-overlay" id="modal-overlay-bg">
   <div class="modal" id="modal-body"></div>
 </div>
 <div class="toast" id="toast"></div>
@@ -782,17 +782,26 @@ async function toggleCollected(loanId,entryId,evt){
 
 async function markPrincipalRepaid(loanId){
   const loan=state.loans.find(l=>l.id===loanId);if(!loan)return;
+  if(!confirm('Mark principal as repaid? You can undo this by editing the loan.'))return;
+  const prev=loan.principalRepaid;
   loan.principalRepaid=true;
-  try{const r=await apiCall('updateLoan',{loan});if(r.error)throw new Error(r.error);render();closeModal();openLoanDetail(loanId);showToast('Principal marked repaid ✓')}
-  catch(e){showToast('Failed: '+e.message,true)}
+  try{const r=await apiCall('updateLoan',{loan});if(r.error)throw new Error(r.error);render();closeModal();openLoanDetail(loanId);showToast('Principal marked repaid ✓ — edit loan to undo')}
+  catch(e){loan.principalRepaid=prev;showToast('Failed: '+e.message,true)}
 }
 
 async function markSettled(loanId){
   const loan=state.loans.find(l=>l.id===loanId);if(!loan)return;
+  if(!confirm('Mark entire loan as fully settled? This marks all interest collected and principal repaid.\n\nYou can undo this by editing the loan.'))return;
+  // Save full backup before changing anything
+  const backup={settled:loan.settled,principalRepaid:loan.principalRepaid,schedule:JSON.parse(JSON.stringify(loan.schedule||[]))};
   loan.settled=true;loan.principalRepaid=true;
   (loan.schedule||[]).forEach(e=>e.collected=true);
-  try{const r=await apiCall('updateLoan',{loan});if(r.error)throw new Error(r.error);render();closeModal();showToast('Loan fully settled ✓')}
-  catch(e){showToast('Failed: '+e.message,true)}
+  try{const r=await apiCall('updateLoan',{loan});if(r.error)throw new Error(r.error);render();closeModal();showToast('Loan fully settled ✓ — edit loan to undo')}
+  catch(e){
+    // Restore from backup on failure
+    loan.settled=backup.settled;loan.principalRepaid=backup.principalRepaid;loan.schedule=backup.schedule;
+    showToast('Failed: '+e.message,true);
+  }
 }
 
 async function deleteLoan(loanId){
@@ -883,28 +892,60 @@ async function saveEditLoan(id){
   if(!due){err.textContent='Repayment date required.';return}
   err.textContent='';
   const btn=document.getElementById('btn-el-save');btn.textContent='Saving…';btn.disabled=true;
-  loan.invNo=document.getElementById('el-invno').value.trim();
-  loan.invDate=document.getElementById('el-invdate').value;
-  loan.borrowerName=name;loan.borrowerPhone=document.getElementById('el-phone').value;
-  loan.borrowerId=document.getElementById('el-id').value;loan.purpose=document.getElementById('el-purpose').value;
-  loan.principal=principal;loan.interestRate=rate;loan.rateType=_rateType;
-  loan.termMonths=months;loan.startDate=document.getElementById('el-start').value;
-  loan.finalRepaymentDate=due;
-  loan.principalRepaid=document.getElementById('el-repaid').value==='true';
-  loan.schedule=_schedEntries.map(e=>({id:e.id,date:e.date,amount:parseFloat(e.amount)||0,collected:!!e.collected,note:e.note||''}));
+
+  // Build updated loan as a NEW object — do NOT touch original loan until save succeeds
+  const updated={
+    ...loan, // keep id, createdAt, settled, payments etc
+    invNo:document.getElementById('el-invno').value.trim(),
+    invDate:document.getElementById('el-invdate').value,
+    borrowerName:name,
+    borrowerPhone:document.getElementById('el-phone').value,
+    borrowerId:document.getElementById('el-id').value,
+    purpose:document.getElementById('el-purpose').value,
+    principal,interestRate:rate,rateType:_rateType,
+    termMonths:months,
+    startDate:document.getElementById('el-start').value,
+    finalRepaymentDate:due,
+    principalRepaid:document.getElementById('el-repaid').value==='true',
+    schedule:_schedEntries.map(e=>({id:e.id,date:e.date,amount:parseFloat(e.amount)||0,collected:!!e.collected,note:e.note||''}))
+  };
+
   const inv1a=parseFloat(document.getElementById('el-inv1a').value)||0;
   const inv1p=parseFloat(document.getElementById('el-inv1p').value)||0;
   const inv2a=parseFloat(document.getElementById('el-inv2a').value)||0;
   const inv2p=parseFloat(document.getElementById('el-inv2p').value)||0;
+
   try{
-    const r=await apiCall('updateLoan',{loan});if(r.error)throw new Error(r.error);
+    // Save loan — use upsert: try update first, if not found append as new row
+    const r=await apiCall('upsertLoan',{loan:updated});
+    if(r.error)throw new Error(r.error);
+
+    // Only update in-memory state AFTER confirmed server save
+    const idx=state.loans.findIndex(l=>l.id===id);
+    if(idx>=0) state.loans[idx]=updated;
+
+    // Handle investment record
     let inv=getInv(id);
     if(inv1a>0||inv2a>0){
-      if(inv){inv.inv1Amount=inv1a;inv.inv1Pct=inv1p;inv.inv2Amount=inv2a;inv.inv2Pct=inv2p;await apiCall('updateInvestment',{investment:inv})}
-      else{const ni={id:uid(),loanId:id,inv1Id:state.investors[0].id,inv1Amount:inv1a,inv1Pct:inv1p,inv2Id:state.investors[1].id,inv2Amount:inv2a,inv2Pct:inv2p};await apiCall('saveLoan',{loan:null,investment:ni});state.investments.push(ni)}
+      if(inv){
+        const updatedInv={...inv,inv1Amount:inv1a,inv1Pct:inv1p,inv2Amount:inv2a,inv2Pct:inv2p};
+        const ir=await apiCall('updateInvestment',{investment:updatedInv});
+        if(ir&&!ir.error){
+          const iidx=state.investments.findIndex(i=>i.loanId===id);
+          if(iidx>=0) state.investments[iidx]=updatedInv;
+        }
+      } else {
+        const ni={id:uid(),loanId:id,inv1Id:state.investors[0].id,inv1Amount:inv1a,inv1Pct:inv1p,inv2Id:state.investors[1].id,inv2Amount:inv2a,inv2Pct:inv2p};
+        const ir=await apiCall('saveLoan',{loan:null,investment:ni});
+        if(ir&&!ir.error) state.investments.push(ni);
+      }
     }
     render();closeModal();openLoanDetail(id);showToast('Loan updated ✓');
-  }catch(e){err.textContent='Save failed: '+e.message;btn.textContent='Save changes';btn.disabled=false}
+  }catch(e){
+    // Do NOT touch state.loans — original data is still intact
+    err.textContent='Save failed: '+e.message+'. Your original data is unchanged.';
+    btn.textContent='Save changes';btn.disabled=false;
+  }
 }
 
 // ── Setup ─────────────────────────────────────────────────────────
@@ -946,7 +987,11 @@ if(loadCfg()){
   document.getElementById('app-screen').style.display='block';
   syncData();
 }
-setInterval(()=>{if(cfg&&document.getElementById('app-screen').style.display!=='none')syncData()},60000);
+setInterval(()=>{
+  // Don't sync while modal is open — would wipe unsaved edits
+  const modalOpen=document.getElementById('modal-overlay').classList.contains('open');
+  if(cfg&&!modalOpen&&document.getElementById('app-screen').style.display!=='none') syncData();
+},60000);
 </script>
 </body>
 </html>
